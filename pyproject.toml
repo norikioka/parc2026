@@ -18,3 +18,16 @@ dev = [
     "jupyterlab",
     "ipykernel",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+extend-exclude = ["notebooks"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/parc2026"]
