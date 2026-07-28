@@ -36,12 +36,15 @@ uv run pytest        # テスト実行（あれば）
 uv run jupyter lab   # ノートブックをローカルで開く場合
 ```
 
+リポジトリ: https://github.com/norikioka/parc2026 （private）
+
 ### Colabセットアップ
 
-1. GitHubにこのリポジトリをpush（未作成の場合は要相談）
+1. GitHub Personal Access Token（repo scope）を発行し、Colab Secretsに `GH_TOKEN` として登録
+   （private repoのclone用）
 2. HuggingFaceでPaliGemmaの利用規約に同意し、トークンを発行。Colab Secretsに`HF_TOKEN`として登録
 3. `notebooks/colab_bootstrap.ipynb` をColabで開き、ランタイムをGPUに設定
-4. `GITHUB_REPO_URL` を実際のリポジトリURLに書き換えて上から順に実行
+4. 上から順に実行
    - GPU確認 → Driveマウント（`HF_HOME`永続化・`MUJOCO_GL=egl`設定）→ 自分のリポジトリclone/pull →
      LeRobot本体を`pi,libero` extrasでインストール → HF認証 → （無印LIBERO検証後に）LIBERO-Plus導入
 
