@@ -10,6 +10,22 @@ PARC2026参加者による実践記事。**Macでは動かない（NVIDIA GPU + 
 - NVIDIA GPU + Linux（Mac不可）→ Colabならこの条件を満たす
 - HuggingFaceアカウント（PaliGemmaはgated repoのため利用申請が必要）
 
+## 0. アカウント設定（Colab実行前に1回だけ）
+
+1. **HuggingFaceアカウント**: https://huggingface.co/join （未作成なら）
+2. **PaliGemmaの利用申請**: https://huggingface.co/google/paligemma-3b-pt-224 を開き、
+   利用規約に同意して簡単なフォームに記入。Googleのgated modelは即時承認されることが多い
+3. **HFトークン発行**: https://huggingface.co/settings/tokens → Create new token →
+   Token type = Read → 名前は `colab-parc2026` 等 → `hf_...` をコピー（再表示不可）
+4. **GitHub PAT発行**: https://github.com/settings/personal-access-tokens → Generate new token →
+   Repository access = `parc2026` のみ選択 → Permissions = Contents: Read-only
+   （Colabはclone/pullのみで書き込みしないため）→ `github_pat_...` をコピー
+5. **Colab Secretsに登録**: Colabの左サイドバー鍵アイコン →
+   `HF_TOKEN`（手順3の値）と `GH_TOKEN`（手順4の値）を追加し、両方「ノートブックからのアクセス」をON
+6. **ノートブックを開く**: リポジトリがprivateなのでGitHub連携より簡単な方法として、
+   ローカルの `notebooks/colab_bootstrap.ipynb` をColabの「ファイル」→「ノートブックをアップロード」で開く。
+   「ランタイム」→「ランタイムのタイプを変更」でGPU(T4等)を選択してから上から順に実行する
+
 ## 手順
 
 ### 1. venv作成 + LeRobotのclone
