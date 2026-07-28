@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# データ・学習成果物(Colab側のGoogle Driveで管理するためgit管理外)
+data/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+wandb/
+

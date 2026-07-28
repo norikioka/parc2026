@@ -1,0 +1,20 @@
+[project]
+name = "parc2026"
+version = "0.1.0"
+description = "PARC2026 (AIRoA x 東京大学松尾・岩澤研究室 Physical AI Robot Challenge 2026) 参加用リポジトリ"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "matplotlib",
+    "pandas",
+    "torch",
+    "pytest",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "jupyterlab",
+    "ipykernel",
+]
