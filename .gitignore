@@ -20,3 +20,6 @@ checkpoints/
 *.ckpt
 wandb/
 
+
+# macOS
+.DS_Store
