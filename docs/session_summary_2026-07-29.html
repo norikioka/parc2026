@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>PARC2026 進捗サマリー (2026-07-29)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a;
+    --accent: #0B2D6B; --accent-bg: #eef2fa; --code-bg: #f4f5f7;
+    --border: #e0e0e0; --ok-bg: #eaf7ee; --ok-border: #3fa85a;
+    --warn-bg: #fff4e5; --warn-border: #e8a33d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a; --fg: #e8e8e8; --muted: #a0a0a0;
+      --accent: #7ea2e0; --accent-bg: #1c2740; --code-bg: #1e2126;
+      --border: #333640; --ok-bg: #16281c; --ok-border: #3fa85a;
+      --warn-bg: #3a2f1a; --warn-border: #b8862f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    line-height: 1.75; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem;
+  }
+  h1 { color: var(--accent); font-size: 1.6rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+  h2 { color: var(--accent); font-size: 1.2rem; margin-top: 2.2rem; padding: 0.4rem 0.7rem; background: var(--accent-bg); border-radius: 6px; }
+  p.lead { color: var(--muted); font-size: 0.95rem; }
+  code { background: var(--code-bg); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+  th, td { border: 1px solid var(--border); padding: 0.55rem 0.8rem; text-align: left; vertical-align: top; }
+  th { background: var(--accent-bg); }
+  .box { border-radius: 8px; padding: 0.9rem 1.1rem; margin: 1rem 0; font-size: 0.93rem; border: 1px solid var(--border); }
+  .ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  .warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .steps { list-style: none; padding-left: 0; counter-reset: step; }
+  .steps > li { counter-increment: step; position: relative; padding: 0.6rem 1rem 0.6rem 2.6rem; margin-bottom: 0.5rem; background: var(--accent-bg); border-radius: 8px; }
+  .steps > li::before { content: counter(step); position: absolute; left: 0.7rem; top: 0.6rem; width: 1.4rem; height: 1.4rem; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+  .status { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 999px; font-size: 0.78rem; font-weight: bold; }
+  .status.done { background: var(--ok-border); color: #fff; }
+  .status.progress { background: var(--warn-border); color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>PARC2026 進捗サマリー</h1>
+<p class="lead">2026年7月28日〜29日の作業まとめ。目標: 予選(8月中旬〜)を確実に突破する。</p>
+
+<h2>1. プロジェクトのセットアップ</h2>
+<p>ローカル(Python 3.12/uv管理)とColabを連携させる開発環境を構築。戦略ドキュメント(<code>docs/strategy.md</code>)、
+環境構築手順(<code>docs/env_setup.md</code>)、進捗チェックリスト(<code>docs/progress.md</code>)を整備し、
+GitHub(<code>github.com/norikioka/parc2026</code>)で管理。</p>
+<p><strong>効果:</strong> 作業内容が全てドキュメント化・バージョン管理され、後から見返せる状態になった。</p>
+
+<h2>2. 採用モデルの選定</h2>
+<p>候補7モデル(OpenVLA-OFT / π0 / π0.5 / Nora / WorldVLA / UniVLA / RIPT-VLA)を比較調査した上で、
+実際にインストールした開発環境(LeRobot)にそのまま乗る<strong>Pi0.5</strong>を採用(LIBERO公式再現値: 平均97.5%)。</p>
+
+<h2>3. Colab無料枠でのOOMクラッシュ調査</h2>
+<div class="box warn">
+<strong>問題:</strong> Pi0.5モデルのロード時に毎回メモリ不足でクラッシュ(exit code 137 = OOM Kill)。
+bfloat16化・コンパイル無効化・非同期無効化など複数の対策を試すも解決せず。
+</div>
+<p>Codex CLI(別モデル)にソースコードを直接調査させ、2段階の調査で根本原因を特定:</p>
+<table>
+<tr><th>調査</th><th>判明した原因</th></tr>
+<tr><td>1回目</td><td>チェックポイント読み込みがCPU RAM経由(7.47GB)。<code>device="cuda"</code>指定で軽減可能と判明→パッチ適用</td></tr>
+<tr><td>2回目</td><td>パッチ後も再発。<strong>モデル生成自体</strong>がCPU上でfloat32の実体を構築してからGPU転送する実装で、
+ここだけで約10GB消費。LeRobot側のコード改修(meta device初期化)が必要で、CLIフラグでの回避策は無いと判明</td></tr>
+</table>
+<p><strong>効果:</strong> 「なぜ動かないか」を推測ではなく実際のソースコードで確定でき、
+コード改修という深追いをせず環境移行を選ぶ、という意思決定が根拠を持って行えた。</p>
+
+<h2>4. RunPodへの移行判断</h2>
+<p>Colab Pro/Pro+・Kaggle・GCP無料枠なども比較した上で、今回の利用パターン(2〜4週間・週10時間程度)では
+<strong>従量課金のRunPodが最安、かつ直接SSH自動化のおまけ付き</strong>と判断。</p>
+<table>
+<tr><th>選択肢</th><th>この期間の費用目安</th><th>備考</th></tr>
+<tr><td>Colab Pro</td><td>月額$12固定</td><td>自動化なし(コピペのまま)</td></tr>
+<tr><td><strong>RunPod</strong></td><td>$6〜20(使った分のみ)</td><td>直接SSH操作可能</td></tr>
+</table>
+
+<h2>5. RunPod環境構築</h2>
+<div class="box ok">
+<span class="status done">完了</span> GPU Pod起動: <strong>RTX 3090</strong>(24GB VRAM・125GB RAM・$0.51/時間)<br>
+<span class="status done">完了</span> SSH直接接続を確立(専用鍵作成・接続確認済み)<br>
+<span class="status done">完了</span> リポジトリをpublic化してPod上にclone(トークン管理不要に)<br>
+<span class="status done">完了</span> LeRobot本体(pi/libero extras)インストール、torch+CUDA動作確認<br>
+<span class="status progress">進行中</span> robosuite用のEGL(GPU描画)システムライブラリを追加インストール中
+</div>
+<p><strong>効果:</strong> RAM 125GBの環境に切り替えたことで、Colab無料枠で起きていたOOMクラッシュの
+発生条件そのものが解消される見込み。加えて、これ以降はColabでの「コピペで結果を貼ってもらう」
+往復作業が不要になり、私が直接コマンドを実行して進められるようになった。</p>
+
+<h2>次のステップ</h2>
+<ol class="steps">
+  <li>robosuiteのEGL依存解消を完了させる</li>
+  <li>LIBERO-Plusのセットアップ・アセットダウンロード</li>
+  <li>Pi0.5(<code>lerobot/pi05_libero_finetuned</code>)で公式再現値(平均97.5%)相当の評価を実行</li>
+  <li>予選提出に向けたロバスト性対策(augmentation等)の実装</li>
+</ol>
+
+</body>
+</html>
