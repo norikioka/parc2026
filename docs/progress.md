@@ -14,11 +14,16 @@
       （LIBERO評価ログの実データ形式が判明次第、`summarize_episode`の入出力を調整する）
 
 ## ステップ1: 環境構築を完走させる（最優先）
-- [ ] HuggingFaceでPaliGemmaの利用規約に同意・トークン発行 **（ユーザー手作業）**
-- [ ] GitHub Personal Access Token(repo scope)発行 **（ユーザー手作業）**
-- [ ] Colab SecretsにHF_TOKEN・GH_TOKENを登録 **（ユーザー手作業）**
-- [ ] `colab_bootstrap.ipynb` をColabで最後まで実行し、無印LIBEROの公式サンプルタスクが動くことを確認 **（ユーザー実行、詰まったら相談）**
-- [ ] LIBERO-Plus導入・アセットダウンロード確認
+- [x] HuggingFaceでPaliGemmaの利用規約に同意・トークン発行 — 2026-07-29
+- [x] GitHub Personal Access Token(repo scope)発行 — 2026-07-29
+- [x] Colab SecretsにHF_TOKEN・GH_TOKENを登録 — 2026-07-29
+- [x] `colab_bootstrap.ipynb` をColabで実行、LeRobot(pi/libero extras)インストールまで完了 — 2026-07-29
+      （無印LIBEROの単独検証はスキップしてLIBERO-Plus導入まで進めた。純粋な無印LIBEROの数値が
+      欲しくなったら別ランタイムで再構築が必要）
+- [ ] LIBERO-Plus導入・アセットダウンロード
+      — 2026-07-29、`hf download`が"Repository not found"で失敗 →
+      `Sylvest/LIBERO-plus`はdatasetリポジトリのため`--repo-type dataset`が必要と判明、
+      修正コマンドを共有・ノートブック/ドキュメントに反映済み。**再実行待ち**
 
 ## ステップ2: 公開チェックポイントで推論再現
 - [ ] `moojink/openvla-7b-oft-finetuned-libero-*` 等をロードして評価スクリプトを実行

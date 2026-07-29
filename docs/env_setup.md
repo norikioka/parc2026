@@ -73,8 +73,10 @@ cd LIBERO-plus
 uv pip install --no-deps -e .
 uv pip install robosuite bddl easydict mujoco wand scikit-image gym
 
-# 追加アセット(オブジェクト・テクスチャ)は別配布
-hf download Sylvest/LIBERO-plus assets.zip
+# 追加アセット(オブジェクト・テクスチャ)は別配布。Sylvest/LIBERO-plusはHF上ではdatasetリポジトリなので
+# --repo-type dataset が必須(付けないとmodelとして探されて「Repository not found」になる)
+hf download Sylvest/LIBERO-plus assets.zip --repo-type dataset --local-dir ./tmp_assets
+unzip -q ./tmp_assets/assets.zip -d ./libero/libero   # 公式指定の配置先
 ```
 
 ### 7. レンダリング設定（評価実行前に毎回必須）
@@ -100,7 +102,8 @@ export HF_HOME=/content/drive/MyDrive/PARC2026/hf_cache
 |---|---|---|
 | CUDAビルド失敗 | PyTorchとCUDAのバージョン不一致 | `nvcc --version` と `torch.version.cuda` を揃える |
 | モデル再DL地獄 | Colabのキャッシュ揮発 | `HF_HOME` をDrive配下に設定 |
-| LIBERO-Plusでアセット不足エラー | assets.zip未展開 | `hf download Sylvest/LIBERO-plus assets.zip` |
+| LIBERO-Plusでアセット不足エラー | assets.zip未展開 | `hf download Sylvest/LIBERO-plus assets.zip --repo-type dataset` の後 `./libero/libero` に展開 |
+| `hf download`で"Repository not found" | `Sylvest/LIBERO-plus`はdatasetリポジトリなのに`--repo-type dataset`を付けずmodelとして探しに行っていた（2026-07-29実際に発生） | `--repo-type dataset` を必ず付ける |
 | flash-attentionのビルドが長い | 依存ビルドが重い | `uv pip install -e ".[pi,libero]"` 実行中に自動処理されるので待つ |
 | LIBEROの評価結果がおかしい | LIBERO-Plus導入で無印LIBEROが上書きされた | 無印LIBEROの評価を先に完了させてからLIBERO-Plusへ |
 

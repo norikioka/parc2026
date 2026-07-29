@@ -231,8 +231,10 @@ cd LIBERO-plus
 uv pip install --no-deps -e .
 uv pip install robosuite bddl easydict mujoco wand scikit-image gym
 
-# 追加アセット(オブジェクト・テクスチャ)は別配布
-hf download Sylvest/LIBERO-plus assets.zip</code></pre>
+# 追加アセット(オブジェクト・テクスチャ)は別配布。Sylvest/LIBERO-plusはHF上ではdatasetリポジトリなので
+# --repo-type dataset が必須(付けないとmodelとして探されて「Repository not found」になる)
+hf download Sylvest/LIBERO-plus assets.zip --repo-type dataset --local-dir ./tmp_assets
+unzip -q ./tmp_assets/assets.zip -d ./libero/libero   # 公式指定の配置先</code></pre>
 
 <h3>7. レンダリング設定（評価実行前に毎回必須）</h3>
 <pre><code>export MUJOCO_GL=egl</code></pre>
@@ -250,7 +252,8 @@ HuggingFaceのキャッシュをGoogle Drive上に向ける。
   <tr><th>症状</th><th>原因</th><th>対策</th></tr>
   <tr><td>CUDAビルド失敗</td><td>PyTorchとCUDAのバージョン不一致</td><td><code>nvcc --version</code> と <code>torch.version.cuda</code> を揃える</td></tr>
   <tr><td>モデル再DL地獄</td><td>Colabのキャッシュ揮発</td><td><code>HF_HOME</code> をDrive配下に設定</td></tr>
-  <tr><td>LIBERO-Plusでアセット不足エラー</td><td>assets.zip未展開</td><td><code>hf download Sylvest/LIBERO-plus assets.zip</code></td></tr>
+  <tr><td>LIBERO-Plusでアセット不足エラー</td><td>assets.zip未展開</td><td><code>hf download Sylvest/LIBERO-plus assets.zip --repo-type dataset</code> の後 <code>./libero/libero</code> に展開</td></tr>
+  <tr><td><code>hf download</code>で"Repository not found"</td><td><code>Sylvest/LIBERO-plus</code>はdatasetリポジトリなのに<code>--repo-type dataset</code>を付けずmodelとして探しに行っていた（2026-07-29実際に発生）</td><td><code>--repo-type dataset</code> を必ず付ける</td></tr>
   <tr><td>flash-attentionのビルドが長い</td><td>依存ビルドが重い</td><td><code>uv pip install -e ".[pi,libero]"</code> 実行中に自動処理されるので待つ</td></tr>
   <tr><td>LIBEROの評価結果がおかしい</td><td>LIBERO-Plus導入で無印LIBEROが上書きされた</td><td>無印LIBEROの評価を先に完了させてからLIBERO-Plusへ</td></tr>
 </table>
