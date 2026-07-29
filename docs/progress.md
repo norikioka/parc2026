@@ -28,7 +28,18 @@
 **ステップ1完了**
 
 ## ステップ2: 公開チェックポイントで推論再現
-- [ ] 以下をColabで実行し、公式再現値(平均97.5%)に近い結果が出るか確認:
+- [x] **Colab無料枠(RAM 12GB)では動作不可と判明・RunPodへ移行決定** — 2026-07-29
+      Pi0.5(lerobot/pi05_libero_finetuned)のロード時に毎回OOM Kill(exit 137)。
+      Codex CLIによる2段階のソースコード調査で確定した原因:
+      1. `modeling_pi05.py`の`from_pretrained`は、checkpointをまず`safetensors.load_file()`で
+         CPU RAMに全ロードしてから`load_state_dict`する実装（`device="cuda"`指定で軽減可能、パッチ済み）
+      2. **より根本的な原因**: モデル自体の生成(`model = cls(config)`)が、PaliGemma(2B)+action
+         expert(300M)を通常の`nn.Module`としてCPU上にfloat32の実体で構築してから`.to(device)`する
+         実装になっており、ここだけで約10GB前後のCPU RAMを消費する。`accelerate.init_empty_weights()`
+         によるmeta device初期化等の改修がLeRobot側に必要で、CLIフラグでの回避策は存在しない
+      → 結論: コード改修は保守的戦略(予選突破確実)の範囲外。RAM十分な環境(RunPod等)へ移行
+- [ ] RunPodでGPU Pod起動・SSH接続確立（進行中）
+- [ ] 以下を(RunPod上で)実行し、公式再現値(平均97.5%)に近い結果が出るか確認:
   ```bash
   lerobot-eval \
     --output_dir=./eval_logs/ \
