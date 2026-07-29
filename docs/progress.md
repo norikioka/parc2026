@@ -20,14 +20,29 @@
 - [x] `colab_bootstrap.ipynb` をColabで実行、LeRobot(pi/libero extras)インストールまで完了 — 2026-07-29
       （無印LIBEROの単独検証はスキップしてLIBERO-Plus導入まで進めた。純粋な無印LIBEROの数値が
       欲しくなったら別ランタイムで再構築が必要）
-- [ ] LIBERO-Plus導入・アセットダウンロード
-      — 2026-07-29、`hf download`が"Repository not found"で失敗 →
-      `Sylvest/LIBERO-plus`はdatasetリポジトリのため`--repo-type dataset`が必要と判明、
-      修正コマンドを共有・ノートブック/ドキュメントに反映済み。**再実行待ち**
+- [x] LIBERO-Plus導入・アセットダウンロード — 2026-07-29完了
+      （途中`colab_ssh`でのSSHサーバー起動がGoogle Colab利用規約違反でランタイム強制切断される
+      トラブルがあり、環境を再構築。以後Colab上でSSH系ツールは使用禁止とした。詳細は`docs/env_setup.md`）
+- [x] `colab_bootstrap.ipynb` を最後まで実行、`parc2026` importまで到達 — 2026-07-29
+
+**ステップ1完了**
 
 ## ステップ2: 公開チェックポイントで推論再現
-- [ ] `moojink/openvla-7b-oft-finetuned-libero-*` 等をロードして評価スクリプトを実行
-- [ ] 結果をベースライン(OpenVLA-OFT: 元97.1 / LIBERO-Plus総合69.6〜79.6程度)と比較
+- [ ] 以下をColabで実行し、公式再現値(平均97.5%)に近い結果が出るか確認:
+  ```bash
+  lerobot-eval \
+    --output_dir=./eval_logs/ \
+    --env.type=libero \
+    --env.task=libero_spatial,libero_object,libero_goal,libero_10 \
+    --eval.batch_size=1 \
+    --eval.n_episodes=10 \
+    --policy.path=pi05_libero_finetuned \
+    --policy.n_action_steps=10 \
+    --env.max_parallel_tasks=1
+  ```
+  （出典: https://huggingface.co/docs/lerobot/en/libero 、チェックポイント: lerobot/pi05_libero_finetuned）
+- [ ] これは**無印LIBERO**での検証。LIBERO-Plus(ロバスト性評価)側の評価スクリプトは
+  `LIBERO-plus`リポジトリ側にある可能性が高く、まだ確認できていない → 次回調査
 
 ## ステップ3: 自力LoRAファインチューニング
 - [ ] OpenVLA-OFT公式finetune設定をLoRA+小バッチ+QLoRAで1回完走

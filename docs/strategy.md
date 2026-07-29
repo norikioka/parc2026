@@ -16,7 +16,17 @@
 マッチングで動いているモデルが多い。予選で問われるのはおそらく「派手な新規性」より「摂動下でどれだけ
 崩れないか」。ここが保守的戦略の核になる。
 
-## 採用モデル: OpenVLA-OFT を第一候補にする
+## 【2026-07-29更新】採用モデルをPi0.5(LeRobot経由)に変更
+
+環境構築で実際にインストールしたのはLeRobot本体(`pi,libero` extras)であり、OpenVLA-OFTは別の
+独立したコードベース。ツールを増やすとその分セットアップ・デバッグコストが増えるため、KISS原則に
+従い、**既にインストール済みで動作確認済みのLeRobot上で完結するPi0.5を第一候補に変更する**。
+
+LeRobot公式が再現した結果: `lerobot/pi05_libero_finetuned` で LIBERO平均97.5%
+(Spatial97.0/Object99.0/Goal98.0/Long96.0) を達成済み・コマンド一発で再現可能。
+OpenVLA-OFTへの切り替えは、Pi0.5でLIBERO-Plus(ロバスト性)のスコアが著しく悪い場合の保険として温存する。
+
+## （旧方針・参考）OpenVLA-OFT を第一候補にする場合
 
 比較した7モデル（OpenVLA / OpenVLA-OFT / π0 / π0-fast / Nora / WorldVLA / UniVLA / RIPT-VLA）のうち、
 **OpenVLA-OFTを軸にする**。理由:

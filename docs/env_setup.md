@@ -107,6 +107,14 @@ export HF_HOME=/content/drive/MyDrive/PARC2026/hf_cache
 | flash-attentionのビルドが長い | 依存ビルドが重い | `uv pip install -e ".[pi,libero]"` 実行中に自動処理されるので待つ |
 | LIBEROの評価結果がおかしい | LIBERO-Plus導入で無印LIBEROが上書きされた | 無印LIBEROの評価を先に完了させてからLIBERO-Plusへ |
 
+## 【重要・禁止事項】ColabでSSHサーバーを起動しない
+
+`colab_ssh`等でColab上にSSHサーバー(cloudflaredトンネル等)を立てて外部から直接操作する方法は、
+**Googleの無料枠の利用規約で明示的に禁止されている**（SSH/RDP/VNC等のリモートデスクトップ
+プロトコルの実行は不可）。2026-07-29に実際にこれが原因と思われる「許可されていないコードを実行した」
+というランタイム強制切断が発生した。直接操作したい場合はColabではなく、最初からSSH前提で
+作られているRunPod等のオンデマンドGPUレンタルを使うこと（`docs/strategy.md`参照）。
+
 ## Colabでの実行について
 
 上記記事の著者はLinux GPUマシンで検証しており、Colab実績の明記はない（未確認）。
