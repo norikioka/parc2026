@@ -1,98 +1,145 @@
 # PARC2026 攻略戦略（予選突破確実優先）
 
 前提: 目標=予選突破を確実にする（優勝・上位進出は狙わない）／ロボット学習の実装経験はほぼゼロ／
-週5〜10時間／Colab（無料/Pro）中心。詳細な調査ソースは末尾「参考」を参照。
+週5〜10時間／GPU環境はRunPod中心（Colab無料枠はメモリ不足で断念、経緯は`docs/env_setup.md`参照）。
 
-## コンペのルール要点（再掲）
+**2026-08-03: 公式予選配布物（PDF「PARC2026開発コンペティション_予選」+ GitHub
+`matsuolab/PARC2026_pre`）が公開され、以下は全てそちらの一次情報に基づき全面更新した。**
+それ以前の記述（LeRobotの`lerobot-eval`直接実行・Pi0.5前提の戦略）は運営の実際の提出仕様と
+異なっていたため置き換えている。
 
-- 評価はLIBERO / LIBERO-Plusベンチマーク。Track1（同一タスク・同一ドメイン、テクスチャ摂動）→
-  Track2（同一タスク・未知ドメイン、視点/位置/ノイズ）→Track3（既知タスク組み合わせ・未知ドメイン、
-  言語指示での新規組み合わせ）を毎回総合評価
-- スコア=成功率＋滑らかさ＋実行効率＋安全性（重み非公開）
-- 予選（8月中旬〜、2週間、1000名規模から）→本選1(200→150)→本選2(100→50)→本選3(50→優秀者)
+## 予選の正確なルール（公式配布物より）
 
-**重要な既知の落とし穴**（LIBERO-Plus論文より）: 既存VLAモデルはカメラ視点・ロボット初期状態の摂動に
-極端に弱く、成功率が95%→30%未満まで急落する。一方で言語指示の書き換えにはほぼ無反応＝視覚パターン
-マッチングで動いているモデルが多い。予選で問われるのはおそらく「派手な新規性」より「摂動下でどれだけ
-崩れないか」。ここが保守的戦略の核になる。
+### スケジュール
+- 予選開始: 2026/7/31(木) 18:00〜
+- **モデル提出締切: 2026/8/14(金) 23:59**
+- **レポート提出締切: 2026/8/17(月) 23:59**（PDF2ページ以内・日本語or英語、締切までに複数回提出可）
+- 予選最終評価ランキング＋レポート内容を踏まえた上位200人が本選へ選出
 
-## 【2026-07-29更新】採用モデルをPi0.5(LeRobot経由)に変更
+### 提出形式（最重要・旧想定と異なる）
+LeRobotの`lerobot-eval`をそのまま提出するのではなく、**HTTPポリシーサーバー一式のzip**を提出する。
+`submission_template/policy_server.py`の`MyPolicy`クラスだけを編集し、それ以外（FastAPIサーバー部分・
+シリアライゼーション）は変更不可。
 
-環境構築で実際にインストールしたのはLeRobot本体(`pi,libero` extras)であり、OpenVLA-OFTは別の
-独立したコードベース。ツールを増やすとその分セットアップ・デバッグコストが増えるため、KISS原則に
-従い、**既にインストール済みで動作確認済みのLeRobot上で完結するPi0.5を第一候補に変更する**。
+```
+submission.zip
+├── policy_server.py   # MyPolicyクラスを編集(必須)
+├── requirements.txt   # 追加依存があれば記載(必須)
+└── model_weights/     # チェックポイント等を配置(任意)
+```
 
-LeRobot公式が再現した結果: `lerobot/pi05_libero_finetuned` で LIBERO平均97.5%
-(Spatial97.0/Object99.0/Goal98.0/Long96.0) を達成済み・コマンド一発で再現可能。
-OpenVLA-OFTへの切り替えは、Pi0.5でLIBERO-Plus(ロバスト性)のスコアが著しく悪い場合の保険として温存する。
+**観測(observation)の形式**:
+- `agentview_image`: (128,128,3) uint8
+- `robot0_eye_in_hand_image`: (128,128,3) uint8
+- `robot0_joint_pos`: (7,) float
+- `robot0_eef_pos`: (3,) float
+- `robot0_eef_quat`: (4,) float
+- `robot0_gripper_qpos`: (2,) float
 
-## （旧方針・参考）OpenVLA-OFT を第一候補にする場合
+**アクション出力**: (7,) float32 相対値 `[dx, dy, dz, droll, dpitch, dyaw, gripper]`
 
-比較した7モデル（OpenVLA / OpenVLA-OFT / π0 / π0-fast / Nora / WorldVLA / UniVLA / RIPT-VLA）のうち、
-**OpenVLA-OFTを軸にする**。理由:
+**エンドポイント**: `GET /health`（起動確認）、`POST /reset`（instruction, seedを受け取る）、
+`POST /act`（msgpack観測→msgpackアクション）
 
-1. LIBERO成功率97.1%・LIBERO-Plusロバスト性スコアも比較対象中最高（研究時点で確認）
-2. チュートリアル・公開チェックポイントが最も充実 → 初心者でも再現しやすい
-3. 運営の講座教材（LeRobot経由でPi0/Gr00t系を使う想定）とも矛盾しない
+### タイムアウト制約（超重要）
+**`/act`・`/reset` の1リクエストが10秒を超えると、そのTrackはerror扱いで即0点**
+（平均でも累積でもなく1回でも超過でアウト）。サーバー起動（モデルロード含む）は既定120秒。
+提出前に必ず`validate_submission.py`のスモークテストで確認する。
 
-**保険（第二候補）**: π0/π0-fastはLoRAファインチューニングでも44GB VRAMを要した報告があり、
-Colab無料/ProのVRAMでは厳しい可能性が高い。VRAM不足で詰まったら**Nora**（Qwen2.5-VL-3Bベースの
-軽量モデル）に切り替える。UniVLAはマルチノード前提・RIPT-VLAは実装難度が高いため今回は除外。
+### 評価環境・採点環境
+- 本番の採点環境: **単一のNVIDIA L4 GPU（VRAM 24GB）**、Track評価に1時間以上かかるとタイムアウト
+- 開発・検証は配布リポジトリの`setup.sh`で本番と同一環境を再現できる（Python 3.10, git, unzip必要、
+  初回10〜20分。Dockerでの再現も可能で既存環境への影響を避けたい場合はこちらを推奨）
+- リーダーボード提出は1日1回まで（採点完了時点でカウント消費、10〜20分程度かかる）
 
-## 4ステップのロードマップ
+### 評価指標・スコア式（`pipeline/total_score.py`より）
+成功/衝突判定をゲートとして、重み付け正規化した滑らかさ指標の積でスコアを計算：
+```
+smooth_metrics = w1*time + w2*jerk + w3*SPARC + w4*trajectory + w5*rotation
+Total Score = (1/N) * Σ success_i * (1 - collision_penalty_i) * smooth_metrics_i
+```
+重み(w1〜w5、合計1)と各指標の正規化式は非公開。予選ではN=1（本選ではTrack毎の総Trial数）。
 
-### ステップ1: 環境構築を最優先で完走させる（〜1週間、週5〜10時間の大半をここに投入）
+**成功判定**: タスクのゴール条件を満たし、かつ衝突なし。衝突は「操作対象(BDDLの`:obj_of_interest`)
+以外の物体の変位が1mmを超えたら失敗」という明確な基準（対象物を掴んで動かすのは当然OK）。
 
-`docs/env_setup.md` の手順をColab上でそのまま再現し、**公式サンプルタスクが1つでも動く**ところまで
-到達する。ここで詰まると予選に参加すらできないため、他の何より優先する。
+### タスク
+配布されているのはexampleタスク5件のみ（`compe/t1/T1_TASKS.csv`）。
+**本番のTrack1採点は非公開の別タスクセットで実施される**（配布キットの試行回数既定は1タスクあたり20）。
 
-- Python 3.12、`uv pip install -e ".[pi,libero]"`、HuggingFace認証（PaliGemma申請）、
-  `MUJOCO_GL=egl` が必須ポイント
-- 無印LIBEROとLIBERO-Plusは同時運用不可。**先に無印LIBEROを完走させてから**LIBERO-Plusに進む
+### 禁止事項（要注意）
+タスク固有のハードコード全般（外部プランナー、有限状態機械、行動テーブル、成功条件/報酬の直接参照、
+評価環境専用のif分岐、非公開タスク識別用fingerprinting、モデルを実質使わないfallback policy）、
+zip提出物側の禁止（入れ子圧縮・zip bomb・シンボリックリンク・パストラバーサル・難読化ファイル）、
+評価中の外部ネットワークアクセス（ポリシーサーバー⇔評価クライアント間の通信のみ許可）。
 
-### ステップ2: 自力学習せず、公開済みチェックポイントで推論を回す（〜3〜5日）
+### 独自学習の要件
+公開モデル構造・事前学習済み重み・tokenizerの利用は可だが、**最終的なAction生成に実質的に寄与する
+独自学習要素**が必須。認められる例: LoRA/adapter等の学習済みパラメータ、独自学習したAction
+head/decoder。認められない例: ファイル形式変換のみ、モデル名変更のみ、プロンプト/推論パラメータ変更のみ。
 
-`moojink/openvla-7b-oft-finetuned-libero-*` など、Hugging Face上の公開済みLoRA済みチェックポイントを
-ロードしてLIBERO評価スクリプトを回す。自分でゼロから学習するより確実かつ速く、
-「動く」成功体験を先に作ることで、以降のデバッグ耐性がつく。
+## 採用モデル: SmolVLA（公式サンプルに準拠、方針転換）
 
-### ステップ3: 自分の手でLoRAファインチューニングを1回通す（〜1〜2週間）
+配布リポジトリの`examples/`に用意されている唯一の公式学習例は
+**`lerobot/smolvla_libero_plus`をベースにしたSmolVLAのLoRA追加学習**（`examples/smolvla_libero_spatial_lora.ipynb`）。
+**Colab無料T4で数時間で完走すると明記**されている軽量モデル。
 
-OpenVLA-OFTの公式finetune設定をベースに、LoRA＋小バッチ＋量子化(QLoRA)でColab上で1回最後まで
-学習を回す。目的は「新規性」ではなく「自分の環境で学習パイプラインが壊れずに完走する」ことの確認。
-VRAM不足が出たらNoraへの切り替えを検討する。
+これまで検討していたPi0.5（LeRobot経由）はモデルロード時にColab無料枠のRAM(12GB)を超過し、
+根本原因の特定にCodex CLIの2段階調査を要した上でRunPodへの環境移行が必要だった
+（経緯は`docs/env_setup.md`参照）。公式が最初からSmolVLAという軽量モデルを提示している以上、
+**Pi0.5にこだわる理由はなく、保守的戦略（予選突破確実優先）としてもSmolVLAへ切り替える**のが妥当。
 
-### ステップ4: ロバスト性対策を1〜2種類だけ絞って追加（〜1週間）
+- ノートブックの学習条件: LIBERO-plus Spatial 10タスク×各5エピソード(計50)、3,000 steps、
+  バッチサイズ1（Colab完走優先の最小構成、伸ばす場合はここが出発点）
+- 出力はLeRobot形式の重み。これ単体では提出できないため、`MyPolicy`に組み込んでHTTPサーバー化する作業が別途必要
+- ノートブック内評価とTrack1本番採点は条件が異なる（観測解像度256×256 vs 128×128、試行数3 vs 非公開20など）ため、
+  ノートブックの成功率は本番スコアの目安にはならない
 
-欲張らず、以下から1〜2個だけ選んで実装する（時間対効果が高い順）:
+## 改訂ロードマップ
 
-1. カメラ視点・色調のaugmentation（LIBERO-Plusで最も弱点になりやすい軸のため優先度最高）
-2. 言語指示のパラフレーズでのテスト（モデルが視覚だけで動いていないか自己点検）
-3. 軽量なdomain randomization（背景・照明のランダム化）
+### ステップ1: 配布リポジトリの環境構築（最優先）
+`matsuolab/PARC2026_pre`をclone→`bash setup.sh`→`source env.sh`。RunPod（本番同様のLinux+GPU環境、
+可能ならL4 GPUで本番環境に近づける）で実行する。ランダムポリシーのまま`policy_server.py`を起動し、
+`python -m pipeline --server-url http://localhost:8000 --track track1 --n-episodes 2`で疎通確認する
+（ここまでは学習不要、配布のまま動く）。
 
-最後に、予選提出前に必ずLIBERO-Plus評価スクリプトで自己採点し、OpenVLA-OFT基準
-（総合スコアの目安69.6〜79.6程度）を大きく下回らないことを確認してから提出する。
+### ステップ2: SmolVLA LoRAノートブックをColabで完走
+`examples/smolvla_libero_spatial_lora.ipynb`をColab（T4）で実行し、マージ済みモデル一式(zip)を得る。
+公式が「Colabで完走する最小構成」と明言しているため、Pi0.5のような環境問題は起きにくい想定。
+
+### ステップ3: `MyPolicy`への組み込み・提出物作成
+ステップ2のモデルを`submission_template/policy_server.py`の`MyPolicy.__init__`/`get_action`/`reset`に実装。
+観測画像の前処理（128×128想定）・10秒タイムアウト内に収まる推論速度を確認。
+`validate_submission.py`で静的検査＋起動スモークテストを実施してからzip化。
+
+### ステップ4: ロバスト性対策（余力があれば）
+LIBERO-plusの摂動（カメラ視点・背景・照明等）に強くするaugmentationを1〜2個追加。
+ただし本番タスクは非公開のため、過度なチューニングより「まず確実に動いて提出できる」ことを優先する。
+
+### ステップ5: 提出前の最終チェック
+`evaluate.py`でzipをエンドツーエンドローカル検証→リーダーボードに1回提出して動作確認→
+本提出は余裕を持って（締切ギリギリ厳禁、大容量zipのアップロードにはラグが生じる）。
+レポート（学習・推論の工夫点、モデル情報、学習情報、権利関係）も忘れずに提出（提出漏れは即失格）。
 
 ## スケジュール感（週5〜10時間換算）
 
 | 時期 | やること |
 |---|---|
-| 今週〜来週 | 環境構築完走（ステップ1） |
-| 8月上旬 | 公開チェックポイントでの推論確認（ステップ2）、Physical AI基礎編講座(6/25〜8/6, 木19-21時)の該当回を並行視聴 |
-| 8月中旬（予選開始） | 自力LoRA学習1回完走（ステップ3） |
-| 8月下旬（予選期間中） | ロバスト性対策1〜2個追加＋自己採点＋提出（ステップ4） |
+| 8月上旬(今週) | 配布リポジトリ環境構築（ステップ1）、SmolVLA LoRA学習（ステップ2） |
+| 8月中旬(〜8/14) | MyPolicy組み込み・提出物作成・ロバスト性対策（ステップ3〜4） |
+| 8/14締切前 | 最終検証・提出（ステップ5） |
+| 8/17締切前 | レポート提出 |
 
-## ローカル⇔Colab⇔Codex CLIの役割分担
+## ローカル⇔RunPod⇔Codex CLIの役割分担
 
 - **ローカル(Mac)**: コード編集・構造化・git管理。MuJoCoのGPU描画非対応のため実行環境としては使わない
-- **Colab**: 実際の学習・評価実行（GPU必須）。`notebooks/colab_bootstrap.ipynb` から起動
+- **RunPod**: 配布リポジトリの`setup.sh`実行・`pipeline`での評価・ポリシーサーバーの動作確認
+- **Colab**: SmolVLA LoRA学習ノートブック実行（公式が無料T4での完走を保証）
 - **Codex CLI**: 実装のセカンドオピニオンや、Claude Codeと並行させたい作業がある場合に使う
-  （例: 片方でLoRA学習コード、もう片方でaugmentation実装、のような分業も可能）
 
-## 参考（詳細は前段の調査結果を参照）
+## 参考
 
+- [PARC2026予選配布リポジトリ](https://github.com/matsuolab/PARC2026_pre)（一次情報・最優先で参照）
+- `docs/env_setup.md`（本リポジトリ内、Pi0.5/RunPod移行の経緯・検証済み手順）
 - [LIBERO論文](https://arxiv.org/abs/2306.03310) / [LIBERO-Plus論文](https://arxiv.org/abs/2510.13626)
-- [OpenVLA-OFT論文](https://arxiv.org/abs/2502.19645) / [GitHub](https://github.com/moojink/openvla-oft)
-- [LeRobot](https://github.com/huggingface/lerobot)
-- [PARC2026環境構築note（taku_sid氏）](https://note.com/taku_sid/n/n49a0008b29a6)
-- `docs/env_setup.md`（本リポジトリ内、検証済み手順）
+- [LeRobot](https://github.com/huggingface/lerobot) / [SmolVLA](https://huggingface.co/lerobot/smolvla_libero_plus)

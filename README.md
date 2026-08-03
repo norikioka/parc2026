@@ -2,65 +2,74 @@
 
 AIRoA × 東京大学松尾・岩澤研究室 Physical AI Robot Challenge 2026 (PARC2026) 参加用。
 
-- 目標: まず予選（8月中旬〜）を確実に突破する
-- 評価環境: LIBERO / LIBERO-Plus ベンチマーク
-- 採用モデル方針: OpenVLA-OFT（保険としてNora）
+- 目標: まず予選（〜8/14提出締切）を確実に突破する
+- 公式予選配布リポジトリ: https://github.com/matsuolab/PARC2026_pre （一次情報・最優先で参照）
+- 採用モデル方針: SmolVLA（`lerobot/smolvla_libero_plus`ベースのLoRA追加学習、公式サンプルに準拠）
 - **戦略の詳細は `docs/strategy.md`、環境構築の詳細手順は `docs/env_setup.md` を参照**
 - 開催概要: `docs/` 内の説明会資料・要約テキストを参照
 
-## 環境構成（ローカル ⇔ Colab 連携）
+## 提出形式（公式仕様）
 
-計算資源はGoogle Colaboratory（無料/Pro）中心。ローカル(Apple Silicon Mac, GPUなし)は
-コード編集・軽量テスト用、実際の学習・シミュレーション実行はColab GPU上で行う。
+LeRobotの評価コマンドをそのまま提出するのではなく、**HTTPポリシーサーバー一式のzip**を提出する。
+観測(128×128画像+関節角+EEF位置/姿勢+グリッパー)→7次元float32相対アクションを返すサーバーを実装し、
+`submission_template/policy_server.py`の`MyPolicy`クラスだけを編集する。
+**推論は1リクエスト10秒以内厳守**（超過でTrackが即0点）。詳細は`docs/strategy.md`参照。
+
+## 環境構成（ローカル ⇔ RunPod / Colab 連携）
+
+- **ローカル(Mac)**: コード編集・git管理専用（MuJoCoのGPU描画非対応のため実行環境としては使わない）
+- **RunPod**: 配布リポジトリ`setup.sh`実行・`pipeline`での評価・ポリシーサーバー動作確認
+  （本番採点環境=Python 3.10.12 / CUDA13.0 / NVIDIA L4 24GB / EGLレンダリング）
+- **Colab**: SmolVLA LoRA学習ノートブック実行（公式が無料T4での完走を保証）
 
 ```
 ローカル (Claude Code / Codex CLI で編集)
    │  git push
    ▼
-GitHub リポジトリ
-   │  git clone / pull
-   ▼
-Google Colab (GPU, notebooks/colab_bootstrap.ipynb から起動)
+GitHub リポジトリ (public: norikioka/parc2026)
+   │
+   ├─ clone/pull → RunPod (matsuolab/PARC2026_pre の setup.sh 実行、評価パイプライン)
+   └─ clone/pull → Colab (SmolVLA LoRAノートブック実行)
 ```
 
 ### ローカルセットアップ
 
-Python 3.12を`uv`で管理（LeRobot最新版の要件に合わせている）。
-ローカルはコード編集・軽量テスト専用 — MuJoCoのGPU描画がMacで動かないため、
-実際のシミュレーション・学習はColab側で行う。
+Python 3.12を`uv`で管理。ローカルはコード編集・軽量テスト専用。
 
 ```bash
 cd ~/projects/PARC
 uv sync              # pyproject.toml の依存関係をインストール
-uv run pytest        # テスト実行（あれば）
-uv run jupyter lab   # ノートブックをローカルで開く場合
+uv run pytest        # テスト実行
 ```
 
-リポジトリ: https://github.com/norikioka/parc2026 （private）
+リポジトリ: https://github.com/norikioka/parc2026 （public）
 
-### Colabセットアップ
+### RunPodセットアップ
 
-1. GitHub Personal Access Token（repo scope）を発行し、Colab Secretsに `GH_TOKEN` として登録
-   （private repoのclone用）
-2. HuggingFaceでPaliGemmaの利用規約に同意し、トークンを発行。Colab Secretsに`HF_TOKEN`として登録
-3. `notebooks/colab_bootstrap.ipynb` をColabで開き、ランタイムをGPUに設定
-4. 上から順に実行
-   - GPU確認 → Driveマウント（`HF_HOME`永続化・`MUJOCO_GL=egl`設定）→ 自分のリポジトリclone/pull →
-     LeRobot本体を`pi,libero` extrasでインストール → HF認証 → （無印LIBERO検証後に）LIBERO-Plus導入
+配布リポジトリ本体は本リポジトリには含めず、RunPod上で別途clone・構築する（`docs/env_setup.md`参照）。
 
-詳細な手順・つまずきポイントは `docs/env_setup.md` を参照。
+```bash
+git clone https://github.com/matsuolab/PARC2026_pre.git
+cd PARC2026_pre
+bash setup.sh     # 初回のみ、10〜20分
+source env.sh      # 評価実行のたび毎回
+
+# 動作確認（ランダムポリシーのまま疎通確認）
+python submission_template/policy_server.py --port 8000 &
+python -m pipeline --server-url http://localhost:8000 --track track1 --n-episodes 2
+```
+
+Pi0.5(LeRobot直接eval)ルートで発生したOOM問題の詳細な経緯・回避策は`docs/env_setup.md`に残してある
+（方針転換済みだが、同種の問題の参考として保持）。
 
 ## ディレクトリ構成
 
 ```
 PARC/
-├── docs/                    # コンペ説明会資料・調査メモ
-├── notebooks/
-│   └── colab_bootstrap.ipynb  # Colab起動用ノートブック
-├── src/parc2026/            # 共通コード（ローカル・Colab両方から import）
+├── docs/                    # コンペ説明会資料・戦略・進捗・環境構築メモ
+├── src/parc2026/            # 共通コード（スコアリング等の自作ユーティリティ）
 ├── tests/                   # ローカルで軽量に回せるユニットテスト
-├── pyproject.toml           # ローカル用依存関係（uv管理）
-└── requirements-colab.txt   # Colab用依存関係（LeRobot/robosuite/mujoco等）
+└── pyproject.toml           # ローカル用依存関係（uv管理）
 ```
 
 ## 開発体制
