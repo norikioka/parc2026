@@ -9,6 +9,12 @@
 #
 # バージョンはSmolVLA LoRA学習ノートブックが使用した v0.6.0 に合わせている
 # (examples/smolvla_libero_spatial_lora.ipynb の LEROBOT_TAG = "v0.6.0")。
+#
+# 【2026-08-04追記】提出物のvalidate_submission.pyで実際にエラーが出て判明:
+# 「外部ソース（スキーム 'git+https:'）の指定は禁止です」というバリデーションエラーで
+# 提出そのものが弾かれた(FAIL)。git+https://形式は使用禁止。
+# PyPIに公式リリースの lerobot==0.6.0 (gitタグv0.6.0と同一)が存在し、smolvla extraも
+# 含まれていることを確認済みのため、PyPI版のバージョン指定に変更した。
 
 # ポリシーサーバーの依存（テンプレート既定、削除しないこと）
 fastapi>=0.68
@@ -16,8 +22,8 @@ uvicorn>=0.15
 msgpack>=1.0
 numpy>=1.19
 
-# SmolVLA推論に必要な依存
-lerobot[smolvla] @ git+https://github.com/huggingface/lerobot.git@v0.6.0
+# SmolVLA推論に必要な依存(PyPI版、git+https://は禁止事項のため使用不可)
+lerobot[smolvla]==0.6.0
 
 # 評価環境のsetup.shはCPU版torchを入れる仕様(評価ハーネス自体はCPUで足りるため)。
 # 推論をGPU(本番はNVIDIA L4)で行うには、CUDA版torchが別途必要な可能性がある。
