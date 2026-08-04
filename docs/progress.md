@@ -47,8 +47,12 @@
 **ステップ2完了（初回、2026-08-04）。計算資源温存のため再学習は保留、詳細は`docs/strategy.md`参照**
 
 ### ステップ3: MyPolicyへの組み込み・提出物作成
-- [ ] `submission_template/policy_server.py`の`MyPolicy`にSmolVLAモデルを実装
-      （観測: 128×128画像+関節角+EEF位置/姿勢+グリッパー / 出力: 7次元float32相対アクション）
+- [x] ローカルで実装（`src/parc2026/my_policy_smolvla.py` + `libero_obs_processing.py`） — 2026-08-04
+      （LeRobot公式ソースコード`LiberoProcessorStep`を直接確認して観測変換ロジックを再現。
+      クォータニオン→軸角度変換・状態ベクトル構築・画像flipはユニットテスト9件で検証済み）
+- [ ] **← 次のアクション**: Colab上で`submission_template/policy_server.py`の`MyPolicy`に
+      `src/parc2026/my_policy_smolvla.py`の`SmolVLAMyPolicy`クラスの中身を貼り付けて動作確認
+      （`model_weights/`に`1st/smolvla_libero_plus_spatial_lora_merged/`の中身を配置）
 - [ ] 推論が10秒/リクエスト以内に収まることを確認（超過で即0点の重要制約）
 - [ ] `validate_submission.py`で静的検査＋起動スモークテスト
 

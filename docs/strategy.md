@@ -148,10 +148,29 @@ Pi0.5(約25億パラメータ)からSmolVLA(約4.5億パラメータ、1/5以下
 公式が「Colabで完走する最小構成」と明言しているため、Pi0.5のような環境問題は起きにくい想定。
 
 ### ステップ3: `MyPolicy`への組み込み・提出物作成
-ステップ2のモデルを`submission_template/policy_server.py`の`MyPolicy.__init__`/`get_action`/`reset`に実装。
-観測画像の前処理（128×128想定）・10秒タイムアウト内に収まる推論速度を確認。
-`validate_submission.py`で静的検査＋起動スモークテストを実施してからzip化。
-この工程もColabでまず試し、うまくいかなければRunPodへ。
+
+**2026-08-04: ローカルで実装済み**（`src/parc2026/my_policy_smolvla.py` + `libero_obs_processing.py`）。
+GPUを使わずに済む部分（観測変換ロジック）はローカルで実装・ユニットテストまで完了させ、
+Colab側では「貼り付けて動かすだけ」の状態にしてからGPU実行時間を使う、という方針で進めた。
+
+**実装のポイント（LeRobot公式ソースコードを直接確認して検証済み）**:
+- PARC2026の生観測（robosuite形式）→SmolVLA入力への変換は、LeRobot公式の
+  `LiberoProcessorStep`（[env_processor.py](https://github.com/huggingface/lerobot/blob/main/src/lerobot/processor/env_processor.py)）
+  と同一のロジックを自前実装する必要があると判明。理由: モデル自身が持つpreprocessor
+  （`policy_preprocessor.json`）はrename/tokenize/正規化のみを行い、LIBERO固有の変換
+  （状態ベクトル構築・画像flip）は含まれていない
+- 状態ベクトル(8次元) = `[eef_pos(3), eef_quatをaxis-angle変換(3), gripper_qpos(2)]`。
+  クォータニオン→軸角度変換のアルゴリズムも公式実装を再現し、既知の回転角でユニットテスト済み
+- 画像はH・W両方向にflip（180度回転）が必須（LeRobotの学習データセットのカメラ向き規約に合わせるため）。
+  一方でリサイズは不要（`SmolVLAPolicy.prepare_images()`が内部で自動リサイズ・パディングするため）
+- `policy.select_action()`はaction chunk(50ステップ)を内部キャッシュするため、50回に1回だけ
+  実際の推論が走る計算になり、10秒/リクエスト制約に対して有利
+- `src/parc2026/libero_obs_processing.py`の変換関数（クォータニオン変換・画像flip）はGPU不要なので
+  ローカルでユニットテスト済み（9件全てpass）。`my_policy_smolvla.py`本体（LeRobotのAPI呼び出し部分）は
+  ローカルにlerobotが入っていないため未検証で、**Colabでの実機確認が必要**
+
+**残作業**: Colab上で`submission_template/policy_server.py`の`MyPolicy`に貼り付けて動作確認、
+10秒タイムアウト内に収まる推論速度を確認、`validate_submission.py`で静的検査＋起動スモークテスト。
 
 ### ステップ4: ロバスト性対策（余力があれば、2026-08-04調査で優先順位を具体化）
 
