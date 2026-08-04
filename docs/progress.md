@@ -23,16 +23,22 @@
 
 ## 【現行】公式配布リポジトリベースの計画（2026-08-03〜）
 
-### ステップ1: 配布リポジトリでの環境構築
-- [ ] `matsuolab/PARC2026_pre` をclone
-- [ ] `bash setup.sh` 実行（本番同一環境、Python3.10/git/unzip必要、初回10〜20分）
-- [ ] `source env.sh`
-- [ ] ランダムポリシーのまま`policy_server.py`起動 → `python -m pipeline --track track1 --n-episodes 2`で疎通確認
-- [ ] 環境情報メモ: 本番採点環境=Python 3.10.12 / torch 2.11.0+cu130 / CUDA13.0 / GPU NVIDIA L4(24GB) / EGLレンダリング
-      （ユーザーが2026-08-03に確認・共有。開発環境もこれに合わせるのが理想）
+### 計算資源の状態（2026-08-04時点）
+- [x] Colab Proへアップグレード（月額約1,100円、セッション切断リスク低減のため）
+- [x] Colab ProでランタイムGPUをL4に選択 — **本番採点環境と同一GPU**を確保
+- [x] RunPod: APIキー設定済み・専用SSH鍵登録済み・以前のPod(`then_white_fly`)はStop状態でデータ保持中（保険として温存）
 
-### ステップ2: SmolVLA LoRA学習（Colab T4想定、公式サンプル）
-- [ ] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行（T4で数時間、公式に完走保証あり）
+### ステップ1: 配布リポジトリでの環境構築（Colab Pro / L4で進行中）
+- [x] `matsuolab/PARC2026_pre` をclone — 2026-08-04
+- [x] `bash setup.sh` 実行・完走（`textures=583`、`suite登録 OK`まで確認） — 2026-08-04
+      （python3.10-venv不足のバグに遭遇・修正済み、詳細は`docs/env_setup.md`）
+- [x] ランダムポリシーで`policy_server.py`起動 → バックグラウンド起動方式のバグ(`%%bash --bg`不安定)を
+      `subprocess.Popen`方式に修正 — 2026-08-04
+- [ ] 修正版での`python -m pipeline --track track1 --n-episodes 2`疎通確認 **← 次のアクション**
+- [x] 環境情報メモ: 本番採点環境=Python 3.10.12 / torch 2.11.0+cu130 / CUDA13.0 / GPU NVIDIA L4(24GB) / EGLレンダリング
+
+### ステップ2: SmolVLA LoRA学習（Colab Pro / L4、公式サンプル）
+- [ ] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行
 - [ ] マージ済みモデル一式(zip)を取得
 
 ### ステップ3: MyPolicyへの組み込み・提出物作成
@@ -41,9 +47,10 @@
 - [ ] 推論が10秒/リクエスト以内に収まることを確認（超過で即0点の重要制約）
 - [ ] `validate_submission.py`で静的検査＋起動スモークテスト
 
-### ステップ4: ロバスト性対策（余力があれば・1〜2個に絞る）
-- [ ] カメラ視点・色調のaugmentation実装
-- [ ] 言語指示パラフレーズでの自己点検
+### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
+- [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）
+- [ ] 次点: StableVLA型の軽量アダプタ（[arXiv:2605.18287](https://arxiv.org/abs/2605.18287)、追加10M未満パラメータ、データ拡張不要）
+- [ ] 見送り: 言語指示パラフレーズ対策（LIBERO-Plusで言語はほぼ無視されると判明、優先度低）
 
 ### ステップ5: 提出前の最終チェック・提出
 - [ ] `evaluate.py`でzipをエンドツーエンドローカル検証
@@ -51,6 +58,9 @@
 - [ ] 本提出（8/14 23:59締切、ギリギリ厳禁）
 - [ ] レポート提出（8/17 23:59締切、PDF2ページ以内、提出漏れ=即失格なので特に注意）
 
+### ステップ6（時間があれば）: TurboVLA並行実験
+- [ ] `docs/strategy.md`参照。SmolVLA提出ライン確保後、別ディレクトリで並行実験
+
 ---
 
-**現在のブロッカー**: なし。次のアクションは配布リポジトリのclone・環境構築（ステップ1）。
+**現在のブロッカー**: なし。次のアクションはColab上で修正版ノートブックの疎通確認セルを再実行すること。

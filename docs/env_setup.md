@@ -11,6 +11,8 @@ Colabでの手順は`notebooks/parc2026_pre_setup.ipynb`、詳細は`README.md`�
 |---|---|---|
 | `venv`作成失敗（`python3.10-venv`関連エラー） | Colabの基盤イメージに`python3.10`本体は入っているが`python3.10-venv`パッケージが欠けているケースがあり、ノートブックの旧セルは`which python3.10`の成否だけで分岐していたためインストール自体がスキップされていた（2026-08-04実際に発生・修正済み） | `notebooks/parc2026_pre_setup.ipynb`のセルを修正し、`python3.10 -m venv`の実動作を検査してから常にapt installを実行する形に変更。既に壊れた`venv/`ディレクトリが残っている場合は`setup.sh`実行前に削除する（`setup.sh`は既存venvディレクトリがあれば再作成しない仕様のため） |
 | `policy_server.py`をバックグラウンド起動しても`curl http://localhost:8000/health`が「接続拒否」、ログファイルも「存在しない」 | Colabの`%%bash --bg`マジックコマンドが不安定で、バックグラウンドプロセスが実際には起動処理に入れていないケースがあった（2026-08-04実際に発生・修正済み） | `%%bash --bg`をやめ、Pythonの`subprocess.Popen(..., stdout=log_file, stderr=subprocess.STDOUT)`で直接起動する方式に変更。`proc.poll()`でプロセスの生死を確認しながら待つことで、ログファイル未作成の問題自体を回避できる |
+| （未発生・予防的メモ）ヘッドレスGPUレンダリング(EGL)関連のエラー | ドライバとGLライブラリのバージョンが完全一致していないと発生しうる（[Zenn記事(inrjin氏)](https://zenn.dev/inrjin/articles/437a359e3ffcd7)より、2026-08-04調査で確認） | ドライバ・GLライブラリのバージョンを揃える。現行の`setup.sh`は`~/.libero/config.yaml`を自動生成するため、同記事にあった「config.yaml未生成→import時に対話式質問でEOFエラー」自体は基本的に解消済みのはず |
+| （未発生・予防的メモ）推論サーバ起動後にOOM | 推論サーバ(JAX等)のGPUメモリ先取りと、LIBERO-Plusのレンダリングのメモリ競合が原因になりうる（同Zenn記事より） | `MEM_FRACTION`等でメモリ確保量を調整する、または推論とレンダリングでGPUを分離する |
 
 ---
 

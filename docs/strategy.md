@@ -1,7 +1,7 @@
 # PARC2026 攻略戦略（予選突破確実優先）
 
 前提: 目標=予選突破を確実にする（優勝・上位進出は狙わない）／ロボット学習の実装経験はほぼゼロ／
-週5〜10時間／GPU環境はRunPod中心（Colab無料枠はメモリ不足で断念、経緯は`docs/env_setup.md`参照）。
+週5〜10時間／GPU環境はColab Pro(L4)先行、RunPodは保険（詳細は本文「役割分担」節参照）。
 
 **2026-08-03: 公式予選配布物（PDF「PARC2026開発コンペティション_予選」+ GitHub
 `matsuolab/PARC2026_pre`）が公開され、以下は全てそちらの一次情報に基づき全面更新した。**
@@ -128,9 +128,35 @@ Pi0.5(約25億パラメータ)からSmolVLA(約4.5億パラメータ、1/5以下
 `validate_submission.py`で静的検査＋起動スモークテストを実施してからzip化。
 この工程もColabでまず試し、うまくいかなければRunPodへ。
 
-### ステップ4: ロバスト性対策（余力があれば）
-LIBERO-plusの摂動（カメラ視点・背景・照明等）に強くするaugmentationを1〜2個追加。
-ただし本番タスクは非公開のため、過度なチューニングより「まず確実に動いて提出できる」ことを優先する。
+### ステップ4: ロバスト性対策（余力があれば、2026-08-04調査で優先順位を具体化）
+
+本番タスクは非公開のため、過度なチューニングより「まず確実に動いて提出できる」ことを優先する。
+その上で余力があれば、以下を**優先度順に1〜2個だけ**選んで実装する（欲張らない）。
+
+1. **【最優先】カメラ視点・ロボット初期姿勢への耐性強化**: LIBERO-Plus論文自身が
+   「カメラ視点・ロボット初期姿勢の摂動で成功率が95%→30%未満に急落する一方、言語指示の
+   バリエーションにはほぼ無反応（言語をほぼ無視して視覚パターンマッチングで動いている）」と
+   明言している。言語指示のパラフレーズ対策より、**視点・姿勢変化に強くするaugmentation
+   （画像の切り出し位置ランダム化・軽い回転/シフト等）を優先する**のが費用対効果最大
+2. **【次点・時間があれば】StableVLA型の軽量アダプタ**（[arXiv:2605.18287](https://arxiv.org/abs/2605.18287)）:
+   追加10M未満パラメータのInformation Bottleneck Adapterで視覚ノイズをフィルタし、
+   追加データなしで平均30%のロバスト性改善を報告。SmolVLAのLoRAと並行して追加できる可能性があり、
+   データ拡張なしで効く点が実装コストの低さにつながる。ただし2026-08-04時点で実装未着手・検証もこれから
+3. **見送り（コスト対効果が合わないと判断）**: XS-VLA（蒸留による性能改善、実装コスト大）、
+   PAIR-VLA（RL後段学習が前提で工数大）。着手する場合も締切までの残り時間と要相談
+
+## 類似コンペ・技術記事の調査結果（2026-08-04）
+
+- **類似コンペは実質「該当なし」**: Kaggle・SIGNATE・Devpost等でLIBERO/VLA/ロボット模倣学習を扱う
+  コンペは確認できず。CoRL/ICRA/NeurIPS併設チャレンジでもLIBERO-Plusを直接使ったものは未確認。
+  → PARC2026は先行事例の乏しい独自性の高いコンペであり、「上位解法を借りる」ショートカットは
+  期待できない。地道な検証（本ロードマップ）が唯一のルートという前提を再確認
+- **実務的に役立つ発見**: Zenn記事[「LIBERO標準ベンチマークでπ0/π0.5を再現してみた」(inrjin氏)](https://zenn.dev/inrjin/articles/437a359e3ffcd7)。
+  ヘッドレスGPUレンダリング(EGL)はドライバとGLライブラリのバージョン完全一致が必須、
+  `~/.libero/config.yaml`未生成だとimport時に対話式質問でEOFエラーになる、推論サーバ(JAX等)の
+  メモリ先取りとレンダリングのメモリ競合がOOMの原因になりうる（`MEM_FRACTION`調整で解決）という
+  実践知見あり。現行の`setup.sh`は`~/.libero/config.yaml`を自動生成するため一部は解消済みだが、
+  Colab上で同種のエラーが出た場合はこの記事のチェックリストを参照する
 
 ### ステップ5: 提出前の最終チェック
 `evaluate.py`でzipをエンドツーエンドローカル検証→リーダーボードに1回提出して動作確認→
@@ -178,7 +204,19 @@ Pro化でバックグラウンド実行・長時間セッション・優先GPU�
 
 ## 参考
 
+### 一次情報（設計の拠り所・原典）
 - [PARC2026予選配布リポジトリ](https://github.com/matsuolab/PARC2026_pre)（一次情報・最優先で参照）
+- [LIBERO論文](https://arxiv.org/abs/2306.03310)（Liu, Zhu, Gao他, 2023）
+- [LIBERO-Plus論文](https://arxiv.org/abs/2510.13626)
+- [SmolVLA論文](https://arxiv.org/abs/2506.01844)（Shukor, Aubakirova他14名, Hugging Face, 2026-08-04調査で特定）
+- [LeRobot](https://github.com/huggingface/lerobot) / [SmolVLA (HF)](https://huggingface.co/lerobot/smolvla_libero_plus)
 - `docs/env_setup.md`（本リポジトリ内、Pi0.5/RunPod移行の経緯・検証済み手順）
-- [LIBERO論文](https://arxiv.org/abs/2306.03310) / [LIBERO-Plus論文](https://arxiv.org/abs/2510.13626)
-- [LeRobot](https://github.com/huggingface/lerobot) / [SmolVLA](https://huggingface.co/lerobot/smolvla_libero_plus)
+
+### ロバスト性・効率化の参考論文（2026-08-04調査、直近1年）
+- [StableVLA](https://arxiv.org/abs/2605.18287)（IB-Adapter、ステップ4候補）
+- [XS-VLA](https://arxiv.org/abs/2607.04171) / [PAIR-VLA](https://arxiv.org/html/2605.13105v1)（見送り、参考のみ）
+- [TurboVLA](https://arxiv.org/abs/2607.27205)（ステップ6並行実験候補）
+
+### 実践記事
+- [PARC2026環境構築note（taku_sid氏）](https://note.com/taku_sid/n/n49a0008b29a6)
+- [「LIBERO標準ベンチマークでπ0/π0.5を再現してみた」(inrjin氏, Zenn)](https://zenn.dev/inrjin/articles/437a359e3ffcd7)
