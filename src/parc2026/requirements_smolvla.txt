@@ -1,0 +1,26 @@
+# submission_template/requirements.txt に配置する依存関係。
+#
+# 【重要・2026-08-04 criticレビューMAJOR#2で判明】
+# lerobotを単に`lerobot`とだけ書くと、SmolVLAPolicyが要求する`transformers`
+# (require_package("transformers", extra="smolvla")、
+#  lerobot/policies/smolvla/modeling_smolvla.pyで確認済み)が入らず、
+# MyPolicy.__init__()実行時に即座にImportErrorでサーバーが起動しない。
+# 必ず [smolvla] extra を明示すること。
+#
+# バージョンはSmolVLA LoRA学習ノートブックが使用した v0.6.0 に合わせている
+# (examples/smolvla_libero_spatial_lora.ipynb の LEROBOT_TAG = "v0.6.0")。
+
+# ポリシーサーバーの依存（テンプレート既定、削除しないこと）
+fastapi>=0.68
+uvicorn>=0.15
+msgpack>=1.0
+numpy>=1.19
+
+# SmolVLA推論に必要な依存
+lerobot[smolvla] @ git+https://github.com/huggingface/lerobot.git@v0.6.0
+
+# 評価環境のsetup.shはCPU版torchを入れる仕様(評価ハーネス自体はCPUで足りるため)。
+# 推論をGPU(本番はNVIDIA L4)で行うには、CUDA版torchが別途必要な可能性がある。
+# 次回Colab/setup.sh環境で `python -c "import torch; print(torch.cuda.is_available())"`
+# を確認し、Falseならバージョンを合わせた上でCUDA版を明示的に追加すること。
+# torch==2.11.0  # 必要に応じてコメント解除・CUDA版に差し替え

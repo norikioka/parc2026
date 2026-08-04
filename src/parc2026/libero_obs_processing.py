@@ -67,6 +67,9 @@ def preprocess_image(image_hwc_uint8: np.ndarray) -> np.ndarray:
     image_hwc_uint8 = np.asarray(image_hwc_uint8)
     if image_hwc_uint8.ndim != 3 or image_hwc_uint8.shape[2] != 3:
         raise ValueError(f"expected (H, W, 3) image, got {image_hwc_uint8.shape}")
+    if image_hwc_uint8.dtype != np.uint8:
+        # float画像が来た場合に/255されて真っ黒に近い画像になる事故を防ぐ
+        raise ValueError(f"expected uint8 image, got dtype {image_hwc_uint8.dtype}")
 
     # uint8 [0,255] HWC -> float32 [0,1] CHW
     img = image_hwc_uint8.astype(np.float32) / 255.0

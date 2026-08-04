@@ -48,11 +48,23 @@
 
 ### ステップ3: MyPolicyへの組み込み・提出物作成
 - [x] ローカルで実装（`src/parc2026/my_policy_smolvla.py` + `libero_obs_processing.py`） — 2026-08-04
-      （LeRobot公式ソースコード`LiberoProcessorStep`を直接確認して観測変換ロジックを再現。
-      クォータニオン→軸角度変換・状態ベクトル構築・画像flipはユニットテスト9件で検証済み）
-- [ ] **← 次のアクション**: Colab上で`submission_template/policy_server.py`の`MyPolicy`に
-      `src/parc2026/my_policy_smolvla.py`の`SmolVLAMyPolicy`クラスの中身を貼り付けて動作確認
-      （`model_weights/`に`1st/smolvla_libero_plus_spatial_lora_merged/`の中身を配置）
+- [x] Colabにデプロイし`policy_server.py`起動・`/health`確認 — 2026-08-04
+- [x] `python -m pipeline --track track1 --n-episodes 2`完走（クラッシュなし） — 2026-08-04
+      **ただし全4タスク成功率0%**（1442秒、全エピソード600/600ステップまで到達し未成功）
+- [x] **criticによる厳格レビュー実施**（Fable/Opus相当） — 2026-08-04
+      CRITICAL 0件、MAJOR 8件、MINOR 5件。クォータニオン変換・状態ベクトル構築・LeRobot API呼び出しは
+      LeRobot v0.6.0実ソースと1行ずつ突き合わせ、完全に正確と確認された（ACCEPT-WITH-RESERVATIONS判定）
+- [x] MAJOR是正（ローカルで完結する分） — 2026-08-04
+      - `get_action`に例外処理追加（予選N=1でクラッシュ即0点を回避、ゼロアクションにフォールバック）
+      - `assert`を`raise ValueError`に変更（`python -O`で無効化される問題を回避）
+      - デプロイ版(`policy_server_smolvla_full.py`)とテスト対象(`libero_obs_processing.py`)の
+        整合性を検証するクロスチェックテストを追加(`test_policy_server_consistency.py`)
+      - `requirements_smolvla.txt`作成、`lerobot[smolvla]`extra明記（忘れるとImportErrorで即死）
+      - 重複していた`my_policy_smolvla_standalone.py`を削除（`policy_server_smolvla_full.py`に一本化）
+      - dtype検証・非ゼロ回転角のテストケースを追加（テスト20件、lint通過）
+- [ ] **← 次のアクション**: Colabでセクション10（front/wristカメラ対応の実データ確認）を実行し、
+      0%の原因を切り分ける（`notebooks/parc2026_pre_setup.ipynb`に追加済み）
+- [ ] ネットワーク遮断下でのモデルロード確認、Colab Pro L4の実際のコンピューティングユニット消費レート確認
 - [ ] 推論が10秒/リクエスト以内に収まることを確認（超過で即0点の重要制約）
 - [ ] `validate_submission.py`で静的検査＋起動スモークテスト
 

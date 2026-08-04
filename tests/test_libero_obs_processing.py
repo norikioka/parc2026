@@ -82,3 +82,22 @@ def test_preprocess_image_flips_both_axes():
 def test_preprocess_image_rejects_wrong_shape():
     with pytest.raises(ValueError):
         preprocess_image(np.zeros((128, 128), dtype=np.uint8))
+
+
+def test_preprocess_image_rejects_non_uint8_dtype():
+    with pytest.raises(ValueError):
+        preprocess_image(np.zeros((128, 128, 3), dtype=np.float32))
+
+
+def test_build_observation_state_nonzero_rotation_lands_in_middle_slice():
+    # 恒等回転だけでなく、非ゼロの軸角度が正しく中央3要素にスライスされることを確認
+    eef_pos = np.array([1.0, 2.0, 3.0])
+    angle = np.pi / 2
+    eef_quat = np.array([0.0, 0.0, np.sin(angle / 2), np.cos(angle / 2)])  # z軸周り90度
+    gripper_qpos = np.array([0.01, -0.01])
+
+    state = build_observation_state(eef_pos, eef_quat, gripper_qpos)
+
+    np.testing.assert_allclose(state[:3], eef_pos, atol=1e-6)
+    np.testing.assert_allclose(state[3:6], [0.0, 0.0, angle], atol=1e-5)
+    np.testing.assert_allclose(state[6:8], gripper_qpos, atol=1e-6)

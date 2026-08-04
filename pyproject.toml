@@ -10,6 +10,11 @@ dependencies = [
     "pandas",
     "torch",
     "pytest",
+    # policy_server.py(提出物本体)がColab側で使う軽量依存。lerobot/GPU不要な部分だけを
+    # ローカルで直接importしてテストできるようにするため(2026-08-04 criticレビューMAJOR#1対応)
+    "fastapi",
+    "uvicorn",
+    "msgpack",
 ]
 
 [dependency-groups]

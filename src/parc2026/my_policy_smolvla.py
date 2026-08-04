@@ -74,6 +74,16 @@ class SmolVLAMyPolicy:
         self.policy.reset()  # action chunkキャッシュをクリア(エピソード間で使い回さないため必須)
 
     def get_action(self, obs: dict[str, np.ndarray]) -> np.ndarray:
+        # 予選はN=1(1試行の失敗がそのままTrackのスコア喪失に直結する)ため、
+        # 想定外の例外でクラッシュするより、無難なゼロアクション(その場に留まる)を返す方が安全。
+        # (2026-08-04 criticレビューMAJOR#5で指摘、対応)
+        try:
+            return self._get_action_impl(obs)
+        except Exception as exc:  # noqa: BLE001 — 予選N=1のため意図的に広くキャッチしゼロ点回避を優先
+            print(f"[MyPolicy] get_action failed, falling back to zero action: {exc}")
+            return np.zeros(7, dtype=np.float32)
+
+    def _get_action_impl(self, obs: dict[str, np.ndarray]) -> np.ndarray:
         # 1. LIBERO固有の観測前処理(LiberoProcessorStep相当、自前実装)
         front_img = preprocess_image(obs["agentview_image"])
         wrist_img = preprocess_image(obs["robot0_eye_in_hand_image"])
@@ -99,5 +109,6 @@ class SmolVLAMyPolicy:
 
         # 4. (7,) float32 numpy配列に変換して返す
         action = action.squeeze(0).to("cpu").numpy().astype(np.float32)
-        assert action.shape == (7,), f"unexpected action shape: {action.shape}"
+        if action.shape != (7,):
+            raise ValueError(f"unexpected action shape: {action.shape}")
         return action
