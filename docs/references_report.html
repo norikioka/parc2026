@@ -12,6 +12,8 @@
     --tag-candidate-bg: #fff4e5; --tag-candidate-fg: #7a4a0a; --tag-candidate-border: #e8a33d;
     --tag-defer-bg: #f2f2f2; --tag-defer-fg: #555; --tag-defer-border: #bbb;
     --tag-context-bg: #eef2fa; --tag-context-fg: #0B2D6B; --tag-context-border: #7ea2e0;
+    --note-bg: #fffbe6; --note-border: #e8c94a; --note-fg: #5c4d05;
+    --glossary-bg: #f7f8fa;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -21,16 +23,19 @@
       --tag-candidate-bg: #3a2f1a; --tag-candidate-fg: #e8b96a; --tag-candidate-border: #b8862f;
       --tag-defer-bg: #26282c; --tag-defer-fg: #aaa; --tag-defer-border: #555;
       --tag-context-bg: #1c2740; --tag-context-fg: #a9c2ec; --tag-context-border: #4a6aa5;
+      --note-bg: #332c10; --note-border: #8a7325; --note-fg: #e8d98a;
+      --glossary-bg: #1c1e22;
     }
   }
   * { box-sizing: border-box; }
   body {
     background: var(--bg); color: var(--fg);
     font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
-    line-height: 1.75; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem;
+    line-height: 1.8; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem;
   }
   h1 { color: var(--accent); font-size: 1.6rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
   h2 { color: var(--accent); font-size: 1.2rem; margin-top: 2.5rem; padding: 0.4rem 0.7rem; background: var(--accent-bg); border-radius: 6px; }
+  h3.gloss-title { font-size: 1.05rem; margin-top: 1.6rem; }
   p.lead { color: var(--muted); font-size: 0.95rem; }
   .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 1.5rem; font-size: 0.85rem; }
   .card {
@@ -43,6 +48,11 @@
   .card .citation {
     font-size: 0.88rem; background: var(--accent-bg); border-radius: 6px; padding: 0.5rem 0.7rem;
   }
+  .note {
+    font-size: 0.88rem; background: var(--note-bg); color: var(--note-fg); border: 1px solid var(--note-border);
+    border-radius: 6px; padding: 0.6rem 0.8rem; margin-top: 0.5rem;
+  }
+  .note b { color: inherit; }
   .tag {
     display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.78rem;
     font-weight: bold; border: 1px solid; margin-bottom: 0.6rem;
@@ -52,6 +62,16 @@
   .tag-defer { background: var(--tag-defer-bg); color: var(--tag-defer-fg); border-color: var(--tag-defer-border); }
   .tag-context { background: var(--tag-context-bg); color: var(--tag-context-fg); border-color: var(--tag-context-border); }
   .meta { font-size: 0.8rem; color: var(--muted); }
+  .glossary {
+    background: var(--glossary-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.3rem; margin: 1rem 0 2rem;
+  }
+  .glossary dl { margin: 0; }
+  .glossary dt { font-weight: bold; color: var(--accent); margin-top: 0.8rem; font-size: 0.95rem; }
+  .glossary dt:first-child { margin-top: 0; }
+  .glossary dd { margin: 0.2rem 0 0; font-size: 0.9rem; }
+  .toc { font-size: 0.9rem; }
+  .toc a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -59,7 +79,17 @@
 <h1>PARC2026 参考文献レポート</h1>
 <p class="lead">
 2026年8月に実施した2回のリサーチ（① 直近1年の関連論文＋原典論文 ② 類似コンペ・Qiita/Zenn記事）で
-参照した情報源の一覧。各項目に、実際に戦略（<code>docs/strategy.md</code>）でどう扱ったかを付記する。
+参照した情報源の一覧。各項目に、実際に戦略（<code>docs/strategy.md</code>）でどう扱ったかを付記している。
+専門用語が多いパートには💡マークで補足説明を入れているので、分からない言葉が出てきたらまず
+下の「0. 用語解説」を確認してほしい。
+</p>
+
+<p class="toc">
+  <a href="#glossary">0. 用語解説</a> ／
+  <a href="#sec1">1. 原典・基盤論文</a> ／
+  <a href="#sec2">2. ロバスト性・効率化の論文</a> ／
+  <a href="#sec3">3. 類似コンペ</a> ／
+  <a href="#sec4">4. 実践記事</a>
 </p>
 
 <div class="legend">
@@ -69,7 +99,62 @@
   <span class="tag tag-context">背景情報のみ</span>
 </div>
 
-<h2>1. 原典・基盤論文（設計の拠り所）</h2>
+<h2 id="glossary">0. 用語解説（先にここを読むと以下が読みやすくなります）</h2>
+
+<div class="glossary">
+  <dl>
+    <dt>VLA（Vision-Language-Action）</dt>
+    <dd>カメラ画像（Vision）と言葉での指示（Language）を入力すると、ロボットの関節・グリッパーをどう動かすか（Action）を
+    直接出力するAIモデルの総称。今回のPARC2026で作るモデルもこのVLAの一種。</dd>
+
+    <dt>LoRA（Low-Rank Adaptation）</dt>
+    <dd>巨大なAIモデルの全パラメータを再学習すると時間もお金もかかるので、モデル本体は固定したまま
+    「差分」にあたる小さな追加パラメータだけを学習する省エネな手法。SmolVLAの追加学習で使っている方式。</dd>
+
+    <dt>PEFT（Parameter-Efficient Fine-Tuning）</dt>
+    <dd>LoRAを含む「モデルの一部だけを効率よく追加学習する」手法群の総称。LoRAはPEFTの代表例の一つ。</dd>
+
+    <dt>摂動（せつどう）・perturbation</dt>
+    <dd>評価のときに<b>わざと加える変化やノイズ</b>のこと。例：カメラの角度を少しずらす、部屋の照明を暗くする、
+    物の置き場所を変える等。「本番環境が多少ズレていてもロボットがちゃんと動けるか」を試すための仕掛け。</dd>
+
+    <dt>ロバスト性（頑健性）</dt>
+    <dd>上記の「摂動」が加わっても性能が大きく落ちない「崩れにくさ・頑丈さ」のこと。
+    PARC2026のLIBERO-Plusは、まさにこのロバスト性を測るためのベンチマーク。</dd>
+
+    <dt>action chunk（アクションチャンク）</dt>
+    <dd>ロボットへの動作指令を1ステップずつ出すのではなく、「今後10ステップ分の動きをまとめて」出力する単位。
+    まとめて出す方が動きが滑らかになりやすく、推論回数も減らせる。</dd>
+
+    <dt>Flow Matching（フローマッチング）</dt>
+    <dd>画像生成AI(Stable Diffusion等)で使われる「拡散モデル」に近い考え方で、連続的な数値（ここではロボットの
+    動き）を少しずつノイズから望ましい形へ変化させて生成する学習手法。SmolVLAの行動生成部分（action expert）で
+    使われている。</dd>
+
+    <dt>蒸留（ちくりゅう）・distillation</dt>
+    <dd>大きくて賢いが重いモデル（先生）の判断を、小さくて軽いモデル（生徒）に真似させて学習させる手法。
+    うまくいけば「軽いのに先生に近い性能」のモデルが作れる。</dd>
+
+    <dt>KVキャッシュ</dt>
+    <dd>Transformer系AIモデルが推論するとき、一度計算した内部の値を使い回すことで計算をやり直さずに
+    高速化する仕組み。これを効率化すると推論全体が速くなる。</dd>
+
+    <dt>Adapter（アダプタ）</dt>
+    <dd>モデル本体には手を加えず、小さな追加の層（部品）だけをモデルの間に差し込んで学習する手法。
+    LoRAもアダプタの一種と考えてよい。</dd>
+
+    <dt>プレプリント・査読</dt>
+    <dd>「査読」とは他の専門家が論文の内容を事前にチェックする審査のこと。「プレプリント」は査読前に
+    公開された論文で、まだ第三者のチェックを通っていないため、内容の正しさは投稿者の自己申告の
+    段階、という点に注意が必要（誤りが含まれている可能性が査読済み論文より高い）。</dd>
+  </dl>
+</div>
+
+<h2 id="sec1">1. 原典・基盤論文（設計の拠り所）</h2>
+<p class="lead">
+  ここに挙げる3本は、今回の戦略の「土台」にあたる論文。PARC2026の評価そのものがLIBERO-Plusという
+  ベンチマークに基づいており、採用モデルSmolVLAもこの3本の考え方の延長線上にある。
+</p>
 
 <div class="card">
   <span class="tag tag-adopt">採用・実装済み/予定</span>
@@ -79,6 +164,9 @@
   <div class="summary">生涯学習ロボット操作ベンチマーク。130タスク×4スイート(Spatial/Object/Goal/Long)。
   PARC2026のTrack1タスク（LIBERO-Plusの元になった`libero_t1`スイート）の基礎定義。</div>
   <div class="citation">引用文脈: PARC2026の評価環境（LIBERO-Plus）そのものの原論文として、成功判定・タスク構造の基準を確認するために参照。</div>
+  <div class="note">💡 補足: 「LIBERO」はもともとロボットが新しいタスクを次々学ぶ「生涯学習」を研究するための
+  シミュレーション環境・タスク集です。PARC2026が使っているのは、これを土台にロバスト性評価用に
+  拡張した「LIBERO-Plus」（次の項目）の方です。</div>
 </div>
 
 <div class="card">
@@ -91,6 +179,10 @@
   成功率が95%→30%未満に急落する一方、言語指示のバリエーションにはほぼ無反応と報告。</div>
   <div class="citation">引用文脈: PARC2026の採点で実際に使われるベンチマークの原論文。この論文の知見（視点・姿勢摂動が最弱点）を根拠に、
   <code>docs/strategy.md</code>ステップ4のロバスト性対策の優先順位（視点・姿勢＞言語パラフレーズ）を決定した。</div>
+  <div class="note">💡 補足: 「言語指示のバリエーションにはほぼ無反応」というのは、モデルが「指示文の言葉」を
+  実はあまり読んでおらず、「画像がこう見えたらこう動く」というパターン暗記に近い動き方をしている
+  可能性が高い、という意味です。つまり「指示文の表現を変える練習」より「画像の見え方が変わっても
+  動じない練習（視点・姿勢の変化への対策）」の方が、本番のスコアに直結しやすいと考えられます。</div>
 </div>
 
 <div class="card">
@@ -102,9 +194,18 @@
   非自己回帰的にアクションチャンクを生成。単一GPU学習・CPU/民生GPU推論を想定した設計。</div>
   <div class="citation">引用文脈: 現在の主軸採用モデル(SmolVLA)の技術的な裏付けとして特定・参照。
   以前はURL未特定だったが2026-08-04の調査で確定し、原典として参考文献に追加した。</div>
+  <div class="note">💡 補足: 「非自己回帰的」というのは、文章生成AIのように「1語ずつ順番に」動きを
+  生成するのではなく、動きの塊（action chunk、用語解説参照）を一気にまとめて生成する方式、という意味です。
+  これにより推論が速くなりやすく、PARC2026の「10秒/リクエスト」制約にも有利に働きます。
+  「単一GPU学習・CPU/民生GPU推論を想定」という設計思想が、私たちがColab（無料〜Proの個人向けGPU環境）で
+  完結させたいという目的とちょうど一致しています。</div>
 </div>
 
-<h2>2. ロバスト性・効率化に関する論文（直近1年、2026-08-04調査）</h2>
+<h2 id="sec2">2. ロバスト性・効率化に関する論文（直近1年、2026-08-04調査）</h2>
+<p class="lead">
+  ここからは「SmolVLAをもっと強くできないか」という観点で調べた最新研究。全部を採用するのではなく、
+  効果とコスト（実装の手間・残り日数）を天秤にかけて取捨選択している。
+</p>
 
 <div class="card">
   <span class="tag tag-candidate">検討中・候補</span>
@@ -117,6 +218,11 @@
   <div class="citation">引用文脈: ステップ4（ロバスト性対策）の次点候補として採用を検討中。
   SmolVLA+LoRAと並行して軽量アダプタを追加できる可能性があり、データ拡張が不要な点が実装コストの低さにつながる。
   2026-08-04時点で実装は未着手・効果検証もこれから。</div>
+  <div class="note">💡 補足: 「Information Bottleneck Adapter」は、画像から「タスクに本当に必要な情報だけ」を
+  抽出し、関係ないノイズ（照明の変化・背景のゴチャゴチャ等）を捨てるフィルターのようなものと考えると
+  イメージしやすいです。「10M未満パラメータ」はSmolVLA本体(約4.5億)と比べてごく小さい追加部品なので、
+  学習・推論のコストもほぼ増えません。「追加データ不要」という点が特に魅力で、今から新しい学習データを
+  集める余裕がない今回の状況に合っています。</div>
 </div>
 
 <div class="card">
@@ -128,6 +234,9 @@
   82.8%→90.3%、LIBERO-Long63.0%→89.0%に改善したと報告。</div>
   <div class="citation">引用文脈: 手法自体は魅力的だが、蒸留の実装コストが高く締切までの残り時間に見合わないと判断し見送り。
   アイデアの一部だけ拝借する余地はあるとメモに残している。</div>
+  <div class="note">💡 補足: 「粗視化空間蒸留」は、上の用語解説の「蒸留」を、画像の細部を大まかに
+  （粗く）まとめた特徴で行う手法、という意味合いです。効果は大きそうですが、そもそも「先生モデル」を
+  別途用意して学習を組む必要があり、今回のような短期決戦にはやや重い工程です。</div>
 </div>
 
 <div class="card">
@@ -138,6 +247,9 @@
   <div class="summary">強化学習ファインチューニング時に「無関係な視覚差分は無視・タスク関連差分には反応」を
   促す対の目的関数を追加する手法。推論時コストはゼロ。</div>
   <div class="citation">引用文脈: RL後段の追加学習が前提となり工数が大きいため見送り。時間に極めて余裕があれば検討の余地ありとメモ。</div>
+  <div class="note">💡 補足: 「強化学習(RL)ファインチューニング」は、LoRAのような教師データを真似る学習とは別方式で、
+  「やってみてうまくいったら褒める・失敗したら学習し直す」という試行錯誤ベースの追加学習です。
+  一般にLoRAより実装・調整の手間が大きく、今回の残り日数では優先度を下げました。</div>
 </div>
 
 <div class="card">
@@ -147,6 +259,9 @@
   <div class="url"><a href="https://www.arxiv.org/pdf/2509.21354" target="_blank">https://www.arxiv.org/pdf/2509.21354</a></div>
   <div class="summary">KVキャッシュの効率化による推論高速化手法。</div>
   <div class="citation">引用文脈: 10秒/リクエストのタイムアウト制約に対する保険として、必要になれば適用を検討する候補。現時点で未着手。</div>
+  <div class="note">💡 補足: 「KVキャッシュ」は用語解説を参照。SmolVLA自体がもともと軽量・高速設計なので、
+  今のところ10秒制約に余裕がある可能性が高く、これは「もし推論が遅すぎて間に合わない場合の保険」
+  という位置づけです。</div>
 </div>
 
 <div class="card">
@@ -163,6 +278,9 @@
   <div class="meta">URL: 調査時点で確定できず（要追加確認）</div>
   <div class="summary">量子化とLoRAを組み合わせた効率的ファインチューニング手法。</div>
   <div class="citation">引用文脈: Colab Pro(L4・24GB)でのメモリ節約に使える可能性がある、という存在の把握のみ。URL未確定のため現時点では未検討。</div>
+  <div class="note">💡 補足: 「量子化」は、モデル内部の数値を通常より粗い精度（例: 32bit→8bit等）で
+  扱うことでメモリ使用量・計算量を減らす手法です。Pi0.5でRAM不足に苦しんだ経緯があるので、
+  もし今後メモリが厳しくなった場合の選択肢として名前だけ記録しています。</div>
 </div>
 
 <div class="card">
@@ -177,9 +295,18 @@
   <div class="citation">引用文脈: ユーザーから提示され調査。数字上は魅力的だが、投稿5日の未査読プレプリントでLIBERO-Plusでの
   数値がなく、PARC2026向け統合実績もゼロのため、締切10日前の現時点で主軸への採用は見送り。
   SmolVLAでの提出ライン確保後の並行実験候補（<code>docs/strategy.md</code>ステップ6）として保留。</div>
+  <div class="note">💡 補足: 「V→L→A から V+L→A」というのは、モデル内部の処理順序の話です。
+  従来型（V→L→A）は「まず画像を理解 → 次に言語で意味づけ → 最後に行動を決める」と順番に処理する
+  重い設計でした。TurboVLAの「V+L→A」は「画像と言語を最初から同時に(並行して)処理し、まとめて行動を
+  決める」設計で、計算の無駄が減りパラメータ数も減らせる、という考え方です。数字だけ見ると非常に
+  魅力的ですが、「未査読プレプリント」（用語解説参照）＝第三者チェック前の自己申告段階であること、
+  PARC2026特有のロバスト性評価(LIBERO-Plus)での実績がまだないことから、今回は様子見にしています。</div>
 </div>
 
-<h2>3. 類似コンペティションの調査結果</h2>
+<h2 id="sec3">3. 類似コンペティションの調査結果</h2>
+<p class="lead">
+  「他の人の攻略法をそのまま真似できないか」を調べた結果。結論は「参考にできる先例はほぼない」でした。
+</p>
 
 <div class="card">
   <span class="tag tag-context">背景情報のみ（該当なしの確認）</span>
@@ -189,6 +316,9 @@
   直接使ったものは未確認。</div>
   <div class="citation">引用文脈: 「上位解法を借りるショートカットは存在しない」ことの確認として重要。PARC2026は先行事例の乏しい
   独自性の高いコンペであるという前提を`docs/strategy.md`に明記した。</div>
+  <div class="note">💡 補足: これは「何も見つからなかった」こと自体が重要な結果です。
+  Kaggle等でよくある「まず優勝者の解法ノートブックを読んで真似る」という定石が、今回は使えません。
+  自分たちで一次情報（公式配布物・論文）を丁寧に読んで、地道に検証していくしかない、という現状認識を裏付けています。</div>
 </div>
 
 <div class="card">
@@ -210,7 +340,10 @@
   <div class="citation">引用文脈: 類似コンペ調査の過程で発見したが、タスク・ロボットの違いが大きく直接の戦略には反映せず。</div>
 </div>
 
-<h2>4. 実践記事（note / Zenn）</h2>
+<h2 id="sec4">4. 実践記事（note / Zenn）</h2>
+<p class="lead">
+  論文と違い、実際に手を動かした人の「詰まりどころと解決策」が書かれているため、環境構築のトラブル対応に直結する。
+</p>
 
 <div class="card">
   <span class="tag tag-adopt">採用・実装済み/予定</span>
@@ -222,6 +355,9 @@
   <div class="citation">引用文脈: Pi0.5(LeRobot直接eval)ルート時代の環境構築手順の主要な出典として全面的に参照・
   再現した（`docs/env_setup.md`に検証済み手順として記録）。現在は方針転換により当該ルート自体は不採用だが、
   手順の正確さは検証済みのため記録として保持。</div>
+  <div class="note">💡 補足: この記事のおかげで、今回のプロジェクトの最初期（Pi0.5を使おうとしていた段階）の
+  環境構築を大きくショートカットできました。今は別モデル(SmolVLA)・別ルート(公式配布リポジトリ)に
+  切り替えていますが、「同じような詰まり方をする可能性がある」参考情報として残しています。</div>
 </div>
 
 <div class="card">
@@ -236,6 +372,10 @@
   <div class="citation">引用文脈: Colab上で同種のエラー(EGL関連・OOM)が今後発生した場合の予防的なトラブルシューティング項目として
   `docs/env_setup.md`に追記済み。現行の`setup.sh`は`~/.libero/config.yaml`を自動生成するため一部の問題は
   解消済みと判断しているが、参照先として保持。</div>
+  <div class="note">💡 補足: 「ヘッドレスGPUレンダリング(EGL)」とは、画面を持たないサーバー上でも
+  3Dシミュレーション画面を裏で描画してAIに見せるための仕組みです（Colabのようなブラウザ経由の
+  環境でロボットシミュレーションを動かす際に必須）。「OOM」は Out Of Memory の略で、メモリ不足で
+  プロセスが強制終了されることです（Pi0.5の時に実際に何度も遭遇した問題と同じ種類のトラブルです）。</div>
 </div>
 
 <div class="card">
