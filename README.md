@@ -15,12 +15,17 @@ LeRobotの評価コマンドをそのまま提出するのではなく、**HTTP�
 `submission_template/policy_server.py`の`MyPolicy`クラスだけを編集する。
 **推論は1リクエスト10秒以内厳守**（超過でTrackが即0点）。詳細は`docs/strategy.md`参照。
 
-## 環境構成（ローカル ⇔ RunPod / Colab 連携）
+## 環境構成（Colab先行、RunPodは保険）
+
+計算資源は**Colab無料枠を先行**させる方針（2026-08-04決定）。SmolVLA(約4.5億パラメータ)は
+公式が「Colab T4で完走」を保証している軽量モデルのため、Pi0.5で発生したようなOOM問題は
+起きにくいと想定している。詰まった場合のみRunPod（本番同様のLinux+GPU環境）へ切り替える。
 
 - **ローカル(Mac)**: コード編集・git管理専用（MuJoCoのGPU描画非対応のため実行環境としては使わない）
-- **RunPod**: 配布リポジトリ`setup.sh`実行・`pipeline`での評価・ポリシーサーバー動作確認
-  （本番採点環境=Python 3.10.12 / CUDA13.0 / NVIDIA L4 24GB / EGLレンダリング）
-- **Colab**: SmolVLA LoRA学習ノートブック実行（公式が無料T4での完走を保証）
+- **Colab（第一候補）**: 配布リポジトリの環境構築・SmolVLA LoRA学習・疎通確認
+  （`notebooks/parc2026_pre_setup.ipynb` から起動）
+- **RunPod（保険）**: Colabで解決しないエラーが出た場合、または本番環境（Python3.10.12/CUDA13.0/
+  NVIDIA L4 24GB/EGL）により近い環境で最終検証したい場合に使う
 
 ```
 ローカル (Claude Code / Codex CLI で編集)
@@ -28,8 +33,8 @@ LeRobotの評価コマンドをそのまま提出するのではなく、**HTTP�
    ▼
 GitHub リポジトリ (public: norikioka/parc2026)
    │
-   ├─ clone/pull → RunPod (matsuolab/PARC2026_pre の setup.sh 実行、評価パイプライン)
-   └─ clone/pull → Colab (SmolVLA LoRAノートブック実行)
+   └─ clone/pull → Colab (notebooks/parc2026_pre_setup.ipynb から matsuolab/PARC2026_pre を
+                    clone・setup.sh実行・SmolVLA学習・疎通確認)
 ```
 
 ### ローカルセットアップ
@@ -44,32 +49,27 @@ uv run pytest        # テスト実行
 
 リポジトリ: https://github.com/norikioka/parc2026 （public）
 
-### RunPodセットアップ
+### Colabセットアップ
 
-配布リポジトリ本体は本リポジトリには含めず、RunPod上で別途clone・構築する（`docs/env_setup.md`参照）。
+1. `notebooks/parc2026_pre_setup.ipynb` をColabで開き、ランタイムをGPUに設定
+2. 上から順に実行（Python3.10確保 → `matsuolab/PARC2026_pre`clone → `setup.sh`実行 →
+   ランダムポリシーでの疎通確認）
+3. 成功したら`examples/smolvla_libero_spatial_lora.ipynb`（配布リポジトリ内、別途Colabで開く）で
+   SmolVLAのLoRA学習に進む
 
-```bash
-git clone https://github.com/matsuolab/PARC2026_pre.git
-cd PARC2026_pre
-bash setup.sh     # 初回のみ、10〜20分
-source env.sh      # 評価実行のたび毎回
-
-# 動作確認（ランダムポリシーのまま疎通確認）
-python submission_template/policy_server.py --port 8000 &
-python -m pipeline --server-url http://localhost:8000 --track track1 --n-episodes 2
-```
-
-Pi0.5(LeRobot直接eval)ルートで発生したOOM問題の詳細な経緯・回避策は`docs/env_setup.md`に残してある
-（方針転換済みだが、同種の問題の参考として保持）。
+詰まった場合は`docs/env_setup.md`の「つまずきポイント一覧」を確認・追記し、それでも解決しなければ
+RunPodへの切り替えを検討する（Pi0.5時代のRunPod環境構築手順も同ファイルに残してある）。
 
 ## ディレクトリ構成
 
 ```
 PARC/
-├── docs/                    # コンペ説明会資料・戦略・進捗・環境構築メモ
-├── src/parc2026/            # 共通コード（スコアリング等の自作ユーティリティ）
-├── tests/                   # ローカルで軽量に回せるユニットテスト
-└── pyproject.toml           # ローカル用依存関係（uv管理）
+├── docs/                              # コンペ説明会資料・戦略・進捗・環境構築メモ
+├── notebooks/
+│   └── parc2026_pre_setup.ipynb       # Colab起動用（配布リポジトリのセットアップ・疎通確認）
+├── src/parc2026/                      # 共通コード（スコアリング等の自作ユーティリティ）
+├── tests/                             # ローカルで軽量に回せるユニットテスト
+└── pyproject.toml                     # ローカル用依存関係（uv管理）
 ```
 
 ## 開発体制

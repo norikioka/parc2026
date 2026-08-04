@@ -97,11 +97,26 @@ head/decoder。認められない例: ファイル形式変換のみ、モデル
 
 ## 改訂ロードマップ
 
-### ステップ1: 配布リポジトリの環境構築（最優先）
-`matsuolab/PARC2026_pre`をclone→`bash setup.sh`→`source env.sh`。RunPod（本番同様のLinux+GPU環境、
-可能ならL4 GPUで本番環境に近づける）で実行する。ランダムポリシーのまま`policy_server.py`を起動し、
+### 【2026-08-04更新】計算資源の方針: Colab先行、RunPodは保険
+
+Pi0.5(約25億パラメータ)からSmolVLA(約4.5億パラメータ、1/5以下)への変更に伴い、旧戦略にあった
+「最初からRunPod」を撤回し、**Colab無料枠を先行させる**方針に変更した。
+
+- Pi0.5でのOOM原因は「モデル生成時にCPU上でfloat32実体を構築する非効率な実装」×「25億パラメータの
+  大きさ」の掛け算で顕在化した。SmolVLAなら同じ非効率な実装であってもCPU一時消費は約1.8GB程度で
+  Colab無料枠(RAM12GB)に余裕で収まる計算になる
+- SmolVLA LoRA学習は公式が「Colab無料T4で数時間の完走」を明言している（`examples/README.md`）
+- ステップ1(環境構築・疎通確認)自体も学習を伴わない軽量な作業のため、まずColabで試す
+- RunPod(RTX3090等)は、Colab無料枠で解決しないエラーが出た場合・評価パイプラインがT4で重すぎる場合・
+  本番環境(L4 GPU)により近い環境で最終検証したい場合の**保険**として温存する
+- トレードオフ: RunPodでは直接SSHで実行できたが、Colabでは「ユーザーがセルを実行→出力を共有」という
+  往復作業に戻る。SmolVLAは大きなトラブルが起きにくいと見込んでいるが、詰まった場合はこの往復が発生しうる
+
+### ステップ1: 配布リポジトリの環境構築（Colab優先）
+`matsuolab/PARC2026_pre`をclone→`bash setup.sh`→`source env.sh`。**まずColab（GPUランタイム）で試す**。
+ランダムポリシーのまま`policy_server.py`を起動し、
 `python -m pipeline --server-url http://localhost:8000 --track track1 --n-episodes 2`で疎通確認する
-（ここまでは学習不要、配布のまま動く）。
+（ここまでは学習不要、配布のまま動く）。うまくいかない場合のみRunPodに切り替える。
 
 ### ステップ2: SmolVLA LoRAノートブックをColabで完走
 `examples/smolvla_libero_spatial_lora.ipynb`をColab（T4）で実行し、マージ済みモデル一式(zip)を得る。
@@ -111,6 +126,7 @@ head/decoder。認められない例: ファイル形式変換のみ、モデル
 ステップ2のモデルを`submission_template/policy_server.py`の`MyPolicy.__init__`/`get_action`/`reset`に実装。
 観測画像の前処理（128×128想定）・10秒タイムアウト内に収まる推論速度を確認。
 `validate_submission.py`で静的検査＋起動スモークテストを実施してからzip化。
+この工程もColabでまず試し、うまくいかなければRunPodへ。
 
 ### ステップ4: ロバスト性対策（余力があれば）
 LIBERO-plusの摂動（カメラ視点・背景・照明等）に強くするaugmentationを1〜2個追加。

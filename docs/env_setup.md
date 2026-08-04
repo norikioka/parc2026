@@ -1,4 +1,13 @@
-# 環境構築手順（検証済みレシピベース）
+# 環境構築手順
+
+**【2026-08-04】現行の環境構築手順**: 公式配布リポジトリ`matsuolab/PARC2026_pre`の`setup.sh`を使う。
+Colabでの手順は`notebooks/parc2026_pre_setup.ipynb`、詳細は`README.md`・`docs/strategy.md`を参照。
+以下（本ファイルの残り全体）は**Pi0.5(LeRobot直接eval)ルート時代の記録**であり、現在は不採用の方針だが、
+同種のトラブル（OOM・Colab利用規約違反等）の参考として残してある。
+
+---
+
+# 【過去の記録】Pi0.5(LeRobot直接eval)ルートの環境構築手順（検証済みレシピベース）
 
 出典: [「初めてのフィジカルAI〜PARC入門編 π0.5 × LIBERO / LIBERO-Plus〜」(note, taku_sid氏)](https://note.com/taku_sid/n/n49a0008b29a6)
 PARC2026参加者による実践記事。**Macでは動かない（NVIDIA GPU + Linuxが必須）**と明記されているため、
