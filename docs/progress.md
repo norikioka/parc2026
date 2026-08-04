@@ -62,8 +62,12 @@
       - `requirements_smolvla.txt`作成、`lerobot[smolvla]`extra明記（忘れるとImportErrorで即死）
       - 重複していた`my_policy_smolvla_standalone.py`を削除（`policy_server_smolvla_full.py`に一本化）
       - dtype検証・非ゼロ回転角のテストケースを追加（テスト20件、lint通過）
-- [ ] **← 次のアクション**: Colabでセクション10（front/wristカメラ対応の実データ確認）を実行し、
-      0%の原因を切り分ける（`notebooks/parc2026_pre_setup.ipynb`に追加済み）
+- [x] front/wristカメラ対応の実データ確認 — 2026-08-04完了、**カメラ対応は正しいと確認**
+      （front=俯瞰視点、wrist=手先アップの画像を実際に目視確認。MAJOR#3の懸念は解消）
+      → 0%の原因はコードバグではなく、**LoRA学習タスク(Spatial 10種)とTrack1 exampleタスク
+      (Object/Goal含む、L2〜L5難易度)の分布の違い**である可能性が高いという仮説に更新
+- [ ] **← 次のアクション**: これ以上ローカル診断を重ねず、実際にリーダーボードへ提出して
+      公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
 - [ ] ネットワーク遮断下でのモデルロード確認、Colab Pro L4の実際のコンピューティングユニット消費レート確認
 - [ ] 推論が10秒/リクエスト以内に収まることを確認（超過で即0点の重要制約）
 - [ ] `validate_submission.py`で静的検査＋起動スモークテスト
