@@ -10,6 +10,7 @@ Colabでの手順は`notebooks/parc2026_pre_setup.ipynb`、詳細は`README.md`�
 | 症状 | 原因 | 対策 |
 |---|---|---|
 | `venv`作成失敗（`python3.10-venv`関連エラー） | Colabの基盤イメージに`python3.10`本体は入っているが`python3.10-venv`パッケージが欠けているケースがあり、ノートブックの旧セルは`which python3.10`の成否だけで分岐していたためインストール自体がスキップされていた（2026-08-04実際に発生・修正済み） | `notebooks/parc2026_pre_setup.ipynb`のセルを修正し、`python3.10 -m venv`の実動作を検査してから常にapt installを実行する形に変更。既に壊れた`venv/`ディレクトリが残っている場合は`setup.sh`実行前に削除する（`setup.sh`は既存venvディレクトリがあれば再作成しない仕様のため） |
+| `policy_server.py`をバックグラウンド起動しても`curl http://localhost:8000/health`が「接続拒否」、ログファイルも「存在しない」 | Colabの`%%bash --bg`マジックコマンドが不安定で、バックグラウンドプロセスが実際には起動処理に入れていないケースがあった（2026-08-04実際に発生・修正済み） | `%%bash --bg`をやめ、Pythonの`subprocess.Popen(..., stdout=log_file, stderr=subprocess.STDOUT)`で直接起動する方式に変更。`proc.poll()`でプロセスの生死を確認しながら待つことで、ログファイル未作成の問題自体を回避できる |
 
 ---
 
