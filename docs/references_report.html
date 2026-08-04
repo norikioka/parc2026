@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>PARC2026 参考文献レポート</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a;
+    --accent: #0B2D6B; --accent-bg: #eef2fa; --border: #e0e0e0;
+    --tag-adopt-bg: #eaf7ee; --tag-adopt-fg: #1e6b34; --tag-adopt-border: #3fa85a;
+    --tag-candidate-bg: #fff4e5; --tag-candidate-fg: #7a4a0a; --tag-candidate-border: #e8a33d;
+    --tag-defer-bg: #f2f2f2; --tag-defer-fg: #555; --tag-defer-border: #bbb;
+    --tag-context-bg: #eef2fa; --tag-context-fg: #0B2D6B; --tag-context-border: #7ea2e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a; --fg: #e8e8e8; --muted: #a0a0a0;
+      --accent: #7ea2e0; --accent-bg: #1c2740; --border: #333640;
+      --tag-adopt-bg: #16281c; --tag-adopt-fg: #7fd99a; --tag-adopt-border: #3fa85a;
+      --tag-candidate-bg: #3a2f1a; --tag-candidate-fg: #e8b96a; --tag-candidate-border: #b8862f;
+      --tag-defer-bg: #26282c; --tag-defer-fg: #aaa; --tag-defer-border: #555;
+      --tag-context-bg: #1c2740; --tag-context-fg: #a9c2ec; --tag-context-border: #4a6aa5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    line-height: 1.75; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem;
+  }
+  h1 { color: var(--accent); font-size: 1.6rem; border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; }
+  h2 { color: var(--accent); font-size: 1.2rem; margin-top: 2.5rem; padding: 0.4rem 0.7rem; background: var(--accent-bg); border-radius: 6px; }
+  p.lead { color: var(--muted); font-size: 0.95rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 1.5rem; font-size: 0.85rem; }
+  .card {
+    border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .card h3 { margin: 0 0 0.3rem; font-size: 1.02rem; }
+  .card .url { font-size: 0.82rem; word-break: break-all; margin-bottom: 0.5rem; }
+  .card .url a { color: var(--accent); }
+  .card .summary { font-size: 0.92rem; margin-bottom: 0.5rem; }
+  .card .citation {
+    font-size: 0.88rem; background: var(--accent-bg); border-radius: 6px; padding: 0.5rem 0.7rem;
+  }
+  .tag {
+    display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.78rem;
+    font-weight: bold; border: 1px solid; margin-bottom: 0.6rem;
+  }
+  .tag-adopt { background: var(--tag-adopt-bg); color: var(--tag-adopt-fg); border-color: var(--tag-adopt-border); }
+  .tag-candidate { background: var(--tag-candidate-bg); color: var(--tag-candidate-fg); border-color: var(--tag-candidate-border); }
+  .tag-defer { background: var(--tag-defer-bg); color: var(--tag-defer-fg); border-color: var(--tag-defer-border); }
+  .tag-context { background: var(--tag-context-bg); color: var(--tag-context-fg); border-color: var(--tag-context-border); }
+  .meta { font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>PARC2026 参考文献レポート</h1>
+<p class="lead">
+2026年8月に実施した2回のリサーチ（① 直近1年の関連論文＋原典論文 ② 類似コンペ・Qiita/Zenn記事）で
+参照した情報源の一覧。各項目に、実際に戦略（<code>docs/strategy.md</code>）でどう扱ったかを付記する。
+</p>
+
+<div class="legend">
+  <span class="tag tag-adopt">採用・実装済み/予定</span>
+  <span class="tag tag-candidate">検討中・候補</span>
+  <span class="tag tag-defer">見送り・保留</span>
+  <span class="tag tag-context">背景情報のみ</span>
+</div>
+
+<h2>1. 原典・基盤論文（設計の拠り所）</h2>
+
+<div class="card">
+  <span class="tag tag-adopt">採用・実装済み/予定</span>
+  <h3>LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot Learning</h3>
+  <div class="meta">Liu, Zhu, Gao, Feng, Liu, Zhu, Stone（2023）</div>
+  <div class="url"><a href="https://arxiv.org/abs/2306.03310" target="_blank">https://arxiv.org/abs/2306.03310</a></div>
+  <div class="summary">生涯学習ロボット操作ベンチマーク。130タスク×4スイート(Spatial/Object/Goal/Long)。
+  PARC2026のTrack1タスク（LIBERO-Plusの元になった`libero_t1`スイート）の基礎定義。</div>
+  <div class="citation">引用文脈: PARC2026の評価環境（LIBERO-Plus）そのものの原論文として、成功判定・タスク構造の基準を確認するために参照。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-adopt">採用・実装済み/予定</span>
+  <h3>LIBERO-Plus: In-depth Robustness Analysis of Vision-Language-Action Models</h3>
+  <div class="meta">2025年公開、2025-12改訂(v3)</div>
+  <div class="url"><a href="https://arxiv.org/abs/2510.13626" target="_blank">https://arxiv.org/abs/2510.13626</a></div>
+  <div class="summary">7軸（物体配置・カメラ視点・ロボット初期状態・言語指示・照明・背景・センサノイズ）の摂動を
+  系統的に導入する10,030タスクのロバスト性ベンチマーク。既存VLAはカメラ視点・初期姿勢の摂動で
+  成功率が95%→30%未満に急落する一方、言語指示のバリエーションにはほぼ無反応と報告。</div>
+  <div class="citation">引用文脈: PARC2026の採点で実際に使われるベンチマークの原論文。この論文の知見（視点・姿勢摂動が最弱点）を根拠に、
+  <code>docs/strategy.md</code>ステップ4のロバスト性対策の優先順位（視点・姿勢＞言語パラフレーズ）を決定した。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-adopt">採用・実装済み/予定</span>
+  <h3>SmolVLA: A Vision-Language-Action Model for Affordable and Efficient Robotics</h3>
+  <div class="meta">Shukor, Aubakirova, Capuano ほか計14名（Hugging Face）</div>
+  <div class="url"><a href="https://arxiv.org/abs/2506.01844" target="_blank">https://arxiv.org/abs/2506.01844</a></div>
+  <div class="summary">SmolVLM2-500Mベースの約4.5億パラメータ軽量VLA。Flow Matching方式のaction expertで
+  非自己回帰的にアクションチャンクを生成。単一GPU学習・CPU/民生GPU推論を想定した設計。</div>
+  <div class="citation">引用文脈: 現在の主軸採用モデル(SmolVLA)の技術的な裏付けとして特定・参照。
+  以前はURL未特定だったが2026-08-04の調査で確定し、原典として参考文献に追加した。</div>
+</div>
+
+<h2>2. ロバスト性・効率化に関する論文（直近1年、2026-08-04調査）</h2>
+
+<div class="card">
+  <span class="tag tag-candidate">検討中・候補</span>
+  <h3>StableVLA</h3>
+  <div class="meta">2026年5月投稿</div>
+  <div class="url"><a href="https://arxiv.org/abs/2605.18287" target="_blank">https://arxiv.org/abs/2605.18287</a></div>
+  <div class="summary">未見の視覚外乱に対し、追加10M未満パラメータのInformation Bottleneck Adapterで
+  ノイズをフィルタし、追加データなしで平均30%のロバスト性改善を報告。0.5Bバックボーンでも
+  7B級VLA並みのロバスト性を達成としている。</div>
+  <div class="citation">引用文脈: ステップ4（ロバスト性対策）の次点候補として採用を検討中。
+  SmolVLA+LoRAと並行して軽量アダプタを追加できる可能性があり、データ拡張が不要な点が実装コストの低さにつながる。
+  2026-08-04時点で実装は未着手・効果検証もこれから。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-defer">見送り・保留</span>
+  <h3>XS-VLA</h3>
+  <div class="meta">2026年7月投稿</div>
+  <div class="url"><a href="https://arxiv.org/pdf/2607.04171" target="_blank">https://arxiv.org/pdf/2607.04171</a></div>
+  <div class="summary">粗視化空間蒸留+潜在Flow Matching手法で、SmolVLA-0.25Bに対しLIBERO平均成功率を
+  82.8%→90.3%、LIBERO-Long63.0%→89.0%に改善したと報告。</div>
+  <div class="citation">引用文脈: 手法自体は魅力的だが、蒸留の実装コストが高く締切までの残り時間に見合わないと判断し見送り。
+  アイデアの一部だけ拝借する余地はあるとメモに残している。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-defer">見送り・保留</span>
+  <h3>PAIR-VLA（What to Ignore, What to React）</h3>
+  <div class="meta">2026年5月投稿</div>
+  <div class="url"><a href="https://arxiv.org/html/2605.13105v1" target="_blank">https://arxiv.org/html/2605.13105v1</a></div>
+  <div class="summary">強化学習ファインチューニング時に「無関係な視覚差分は無視・タスク関連差分には反応」を
+  促す対の目的関数を追加する手法。推論時コストはゼロ。</div>
+  <div class="citation">引用文脈: RL後段の追加学習が前提となり工数が大きいため見送り。時間に極めて余裕があれば検討の余地ありとメモ。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-candidate">検討中・候補（バックアップ）</span>
+  <h3>KV-Efficient VLA</h3>
+  <div class="meta">2025年9月投稿</div>
+  <div class="url"><a href="https://www.arxiv.org/pdf/2509.21354" target="_blank">https://www.arxiv.org/pdf/2509.21354</a></div>
+  <div class="summary">KVキャッシュの効率化による推論高速化手法。</div>
+  <div class="citation">引用文脈: 10秒/リクエストのタイムアウト制約に対する保険として、必要になれば適用を検討する候補。現時点で未着手。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ</span>
+  <h3>VLA-Adapter（0.6B）</h3>
+  <div class="meta">URL: 調査時点で確定できず（要追加確認）</div>
+  <div class="summary">アダプタ型の軽量PEFT手法。LIBERO平均96.2%(Spatial96.0/Object96.8/Goal97.4/Long94.4)と報告。</div>
+  <div class="citation">引用文脈: LoRA以外のPEFT選択肢として存在を把握したのみ。URLが未確定のため優先度は低く、現時点では採用検討の対象外。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ</span>
+  <h3>QuantFT-VL</h3>
+  <div class="meta">URL: 調査時点で確定できず（要追加確認）</div>
+  <div class="summary">量子化とLoRAを組み合わせた効率的ファインチューニング手法。</div>
+  <div class="citation">引用文脈: Colab Pro(L4・24GB)でのメモリ節約に使える可能性がある、という存在の把握のみ。URL未確定のため現時点では未検討。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-defer">見送り・保留（主軸として不採用）</span>
+  <h3>TurboVLA: Real-Time Vision-Language-Action Model at 32 Hz on an RTX 4090</h3>
+  <div class="meta">2026年7月29日投稿・未査読プレプリント</div>
+  <div class="url"><a href="https://arxiv.org/abs/2607.27205" target="_blank">https://arxiv.org/abs/2607.27205</a> /
+  <a href="https://github.com/H-EmbodVis/TurboVLA" target="_blank">GitHub: H-EmbodVis/TurboVLA</a></div>
+  <div class="summary">V→L→AからV+L→Aへのアーキテクチャ変更で大幅なパラメータ削減。0.2Bパラメータ、
+  無印LIBERO成功率97.7%、推論レイテンシ31.2ms。GitHubにチェックポイント・LIBERO評価スクリプトを
+  Apache-2.0で公開（star306, 2026-08-04時点で整備状況は良好と確認）。</div>
+  <div class="citation">引用文脈: ユーザーから提示され調査。数字上は魅力的だが、投稿5日の未査読プレプリントでLIBERO-Plusでの
+  数値がなく、PARC2026向け統合実績もゼロのため、締切10日前の現時点で主軸への採用は見送り。
+  SmolVLAでの提出ライン確保後の並行実験候補（<code>docs/strategy.md</code>ステップ6）として保留。</div>
+</div>
+
+<h2>3. 類似コンペティションの調査結果</h2>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ（該当なしの確認）</span>
+  <h3>Kaggle / SIGNATE / Devpost等でのLIBERO・VLA関連コンペ</h3>
+  <div class="summary">調査の結果、Kaggle・SIGNATE・Devpost等でLIBERO/VLA/ロボット模倣学習を直接扱う
+  コンペティションは確認できなかった。CoRL/ICRA/NeurIPS併設チャレンジでもLIBERO-Plusを
+  直接使ったものは未確認。</div>
+  <div class="citation">引用文脈: 「上位解法を借りるショートカットは存在しない」ことの確認として重要。PARC2026は先行事例の乏しい
+  独自性の高いコンペであるという前提を`docs/strategy.md`に明記した。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ</span>
+  <h3>LeRobot Worldwide Hackathon</h3>
+  <div class="meta">Hugging Face主催、2025年6月14-15日、賞金1.5万ユーロ</div>
+  <div class="url"><a href="https://huggingface.co/LeRobot-worldwide-hackathon" target="_blank">https://huggingface.co/LeRobot-worldwide-hackathon</a></div>
+  <div class="summary">SO-101アームを使ったLeRobotエコシステムのハッカソン。PARC2026とは直接関係しないが、
+  同じLeRobotエコシステム上のイベントとして背景情報を把握。</div>
+  <div class="citation">引用文脈: 直接の戦略には反映せず、コミュニティの盛り上がり・関連イベントの存在確認のみ。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ</span>
+  <h3>Real Robot Challenge / HomeRobot OVMM Challenge</h3>
+  <div class="meta">NeurIPS 2021-2022 / NeurIPS 2023</div>
+  <div class="summary">それぞれTriFingerロボットの遠隔操作+オフラインRL、移動マニピュレーションのチャレンジ。
+  ロボットの種類・タスクがPARC2026とは大きく異なる。</div>
+  <div class="citation">引用文脈: 類似コンペ調査の過程で発見したが、タスク・ロボットの違いが大きく直接の戦略には反映せず。</div>
+</div>
+
+<h2>4. 実践記事（note / Zenn）</h2>
+
+<div class="card">
+  <span class="tag tag-adopt">採用・実装済み/予定</span>
+  <h3>初めてのフィジカルAI〜PARC入門編 π0.5 × LIBERO / LIBERO-Plus〜</h3>
+  <div class="meta">note, taku_sid氏</div>
+  <div class="url"><a href="https://note.com/taku_sid/n/n49a0008b29a6" target="_blank">https://note.com/taku_sid/n/n49a0008b29a6</a></div>
+  <div class="summary">PARC2026参加者による環境構築の実践記事。Python 3.12必須、HuggingFace認証、
+  MUJOCO_GL=egl設定、LIBERO/LIBERO-Plus同時運用不可などの実務的つまずきポイントを詳細に記録。</div>
+  <div class="citation">引用文脈: Pi0.5(LeRobot直接eval)ルート時代の環境構築手順の主要な出典として全面的に参照・
+  再現した（`docs/env_setup.md`に検証済み手順として記録）。現在は方針転換により当該ルート自体は不採用だが、
+  手順の正確さは検証済みのため記録として保持。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-candidate">検討中・候補</span>
+  <h3>LIBERO標準ベンチマークでπ0/π0.5を再現してみた</h3>
+  <div class="meta">Zenn, inrjin氏</div>
+  <div class="url"><a href="https://zenn.dev/inrjin/articles/437a359e3ffcd7" target="_blank">https://zenn.dev/inrjin/articles/437a359e3ffcd7</a></div>
+  <div class="summary">ヘッドレスGPUレンダリング(EGL)はドライバとGLライブラリのバージョン完全一致が必須、
+  `~/.libero/config.yaml`未生成だとimport時に対話式質問でEOFエラーになる、推論サーバのGPUメモリ先取りと
+  レンダリングのメモリ競合がOOMの原因になりうる（`MEM_FRACTION`調整で解決）といった実践知見。
+  動的ワークキューで2GPU・2000エピソードを3時間で完走。</div>
+  <div class="citation">引用文脈: Colab上で同種のエラー(EGL関連・OOM)が今後発生した場合の予防的なトラブルシューティング項目として
+  `docs/env_setup.md`に追記済み。現行の`setup.sh`は`~/.libero/config.yaml`を自動生成するため一部の問題は
+  解消済みと判断しているが、参照先として保持。</div>
+</div>
+
+<div class="card">
+  <span class="tag tag-context">背景情報のみ</span>
+  <h3>LeRobot LIBEROの概要</h3>
+  <div class="meta">note, npaka氏</div>
+  <div class="url"><a href="https://note.com/npaka/n/nd824fd870800" target="_blank">https://note.com/npaka/n/nd824fd870800</a></div>
+  <div class="summary">LIBEROベンチマークの全体像を解説する記事。</div>
+  <div class="citation">引用文脈: ベンチマーク全体像の把握用に参照したのみで、具体的な戦略への反映はなし。</div>
+</div>
+
+</body>
+</html>
