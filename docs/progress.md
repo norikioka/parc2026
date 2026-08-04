@@ -70,8 +70,7 @@
       **平均0.29秒・最大0.86秒**（10秒制約に大きく余裕あり）
 - [x] `validate_submission.py`で静的検査＋起動スモークテスト — 2026-08-04 **PASS（errors=0, warnings=1）**
       警告は`nondeterministic`（Flow Matchingによる意図的な確率的挙動、対応不要）のみ
-- [x] ネットワーク遮断下でのモデルロード確認、Colab Pro L4の実際のコンピューティングユニット消費レート確認
-      → 未実施だが優先度低下（下記の実提出失敗の教訓の方が緊急だったため）
+- [x] **【訂正】ネットワーク遮断下でのモデルロード確認 → 優先度を最上位に戻す**（後述のplanner設計で判明）
 
 **【重要インシデント】2026-08-04 誤った提出物での初回提出が失敗**:
 `1st/smolvla_libero_plus_spatial_lora_merged.zip`（モデル重みのみ、`policy_server.py`/
@@ -86,8 +85,31 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
 修正後、正しい構造（`policy_server.py`+`requirements.txt`+`model_weights/`）でzip化し、
 ローカルバリデーションでPASSを確認済み。**次は正しいzipでの再提出**。
 
-- [ ] **← 次のアクション**: 正しいzip（PASS確認済み）をOmnicampusに再提出し、
-      公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
+**【2026-08-04 planner設計・重大発見】急いで再提出せず、以下を先に修正することにした**
+（ユーザー方針：今日は既に1回提出済みで急ぐ必要がないため、次の貴重な1回の質を上げる）:
+
+1. **【最重要・実ソースで検証済み】VLMトークナイザがHub参照のままだと採点環境で起動失敗する**:
+   `SmolVLAPolicy`は`config.vlm_model_name`(既定"HuggingFaceTB/SmolVLM2-500M-Video-Instruct"という
+   HF Hub文字列)から`AutoConfig.from_pretrained`/`AutoProcessor.from_pretrained`を必ず呼ぶ
+   （`lerobot/policies/smolvla/smolvlm_with_expert.py:99,101`で確認、`load_vlm_weights=False`でも
+   `AutoProcessor`側は無条件実行）。評価中は外部ネットワーク禁止のため、ローカルにキャッシュがない
+   採点環境では**サーバー起動そのものが失敗する**。ローカルColabで動いていたのは学習時にキャッシュが
+   温まっていたためで、この構成のテストでは原理的に検出不可能だった
+   → 対応: `model.safetensors`にVLM本体の重みは既に含まれている（500個中490個のテンソルが
+   `vlm_with_expert.*`と確認済み）ため、Hubから必要なのは軽量なconfig/tokenizerファイルのみ
+   （計約4.8MB）。`src/parc2026/vlm_assets/`にダウンロード・git管理下に置き、`policy_server_smolvla_full.py`
+   で`config.vlm_model_name`をこのローカルパスに向けるよう修正済み。Colabノートブックにも
+   ダウンロード・配置セルとオフライン起動確認セルを追加済み
+2. `n_action_steps`を50→10に変更（`chunk_size`=50とは独立、単純なキュー切り出しのため安全と実ソースで確認済み）。
+   600ステップのエピソード中12回しか画像を見ない開ループ状態を解消し、再計画頻度を5倍に
+3. アクション統計の診断ログを追加（100ステップごとにグリッパー値等を出力、次回GPU実行の情報量を増やす）
+4. torch依存の衝突リスクを確認 → `lerobot==0.6.0`の制約は`torch<2.12.0,>=2.7`で、
+   本番環境のtorch2.11.0+cu130と既に互換、問題なし
+
+- [ ] **← 次のアクション**: Colabで上記1〜3を反映したzipを作成し、
+      **オフライン起動確認**（新規追加セクション7.5）→ ローカル`validate_submission.py`再PASS →
+      `python -m pipeline`で回帰確認（性能measureではなくクラッシュ有無・グリッパー動作の確認）→
+      問題なければ次回提出時に公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
 
 ### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
 - [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）

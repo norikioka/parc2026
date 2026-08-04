@@ -78,6 +78,28 @@ class MyPolicy(BasePolicy):
         config = PreTrainedConfig.from_pretrained(model_dir)
         config.device = self.device
 
+        # 【2026-08-04 planner設計・実ソース検証済み】評価中は外部ネットワークアクセスが禁止されているが、
+        # SmolVLAPolicyはvlm_model_name(デフォルト"HuggingFaceTB/SmolVLM2-500M-Video-Instruct"という
+        # HF Hub上の文字列参照)からAutoConfig.from_pretrained/AutoProcessor.from_pretrainedを
+        # 必ず呼ぶ(smolvlm_with_expert.py:99,101、load_vlm_weightsの値に関わらずAutoProcessor側は無条件実行)。
+        # モデル本体の重みは1st/.../model.safetensors自体に既に含まれている(500個中490個のテンソルが
+        # vlm_with_expert.*)ため、Hubから取得すべきはconfig/tokenizer等の軽量ファイルのみ。
+        # これをmodel_weights/vlm/にローカル同梱し、Hubアクセスを完全に回避する。
+        vlm_local_dir = Path(__file__).parent / "model_weights" / "vlm"
+        if vlm_local_dir.exists():
+            config.vlm_model_name = str(vlm_local_dir.resolve())
+        else:
+            print(f"[MyPolicy] 警告: {vlm_local_dir} が見つかりません。"
+                  f"vlm_model_nameはHF Hub参照のままのため、評価中のネットワーク遮断でサーバー起動が失敗する恐れがあります。")
+
+        # 【2026-08-04 planner設計・実ソース検証済み】chunk_size(=50, モデルが1回のFlow Matchingで
+        # 予測する長さ)とn_action_steps(=実際に使ってから再計画するまでの長さ)は独立しており、
+        # select_action()は単純に先頭n_action_steps個をキューに積むだけ(modeling_smolvla.py:267)。
+        # 既定の50だと600ステップのエピソード中わずか12回しか画像を見ずに開ループで動くことになり、
+        # LIBERO-Plus型の摂動タスクでは途中でズレると修正できない。10に下げて再計画頻度を5倍にする
+        # (計算コストは変わらない。実測レイテンシ平均0.29秒/最大0.86秒に対し10秒制約の余裕は十分)。
+        config.n_action_steps = 10
+
         self.policy = SmolVLAPolicy.from_pretrained(model_dir, config=config)
         self.policy.to(self.device)
         self.policy.eval()
@@ -87,10 +109,12 @@ class MyPolicy(BasePolicy):
         )
 
         self.instruction = ""
+        self._step_count = 0  # 診断ログ用(A6): 100ステップごとにアクション統計を出力
 
     def reset(self, instruction: str = "") -> None:
         self.instruction = instruction
         self.policy.reset()  # action chunkキャッシュをクリア(エピソード間で使い回さないため必須)
+        self._step_count = 0
 
     @staticmethod
     def _quat_to_axisangle(quat):
@@ -154,6 +178,14 @@ class MyPolicy(BasePolicy):
         action = action.squeeze(0).to("cpu").numpy().astype(np.float32)
         if action.shape != (7,):
             raise ValueError(f"unexpected action shape: {action.shape}")
+
+        # 診断ログ(A6): 100ステップごとにグリッパー値等を出力し、
+        # 「そもそも掴もうとしているか」を次回のGPU実行から確認できるようにする
+        self._step_count += 1
+        if self._step_count % 100 == 1:
+            print(f"[MyPolicy] step={self._step_count} action={action.round(3)} "
+                  f"gripper={action[6]:.3f}")
+
         return action
 
 
