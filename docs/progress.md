@@ -40,8 +40,11 @@
 **ステップ1完了（2026-08-04）**
 
 ### ステップ2: SmolVLA LoRA学習（Colab Pro / L4、公式サンプル）
-- [ ] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行 **← 進行中**
-- [ ] マージ済みモデル一式(zip)を取得
+- [x] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行・完走 — 2026-08-04
+- [x] マージ済みモデル一式(zip)を取得 — `~/projects/PARC/1st/smolvla_libero_plus_spatial_lora_merged/`
+      （Base 66.67%→LoRA後73.33%、+6.67pt。ただし評価は1タスク3エピソードのみでノイズ大、参考値）
+
+**ステップ2完了（初回、2026-08-04）。計算資源温存のため再学習は保留、詳細は`docs/strategy.md`参照**
 
 ### ステップ3: MyPolicyへの組み込み・提出物作成
 - [ ] `submission_template/policy_server.py`の`MyPolicy`にSmolVLAモデルを実装

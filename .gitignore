@@ -18,7 +18,15 @@ checkpoints/
 *.pt
 *.pth
 *.ckpt
+*.safetensors
 wandb/
+
+# 学習実験の成果物ディレクトリ(モデル重みが数百MB〜GB単位になるためgit管理外)
+# 比較CSV等の小さい結果ファイルだけは個別にgit add -f で追跡してよい
+1st/
+2nd/
+3rd/
+experiments/
 
 
 # macOS
