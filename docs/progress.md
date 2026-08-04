@@ -34,11 +34,13 @@
       （python3.10-venv不足のバグに遭遇・修正済み、詳細は`docs/env_setup.md`）
 - [x] ランダムポリシーで`policy_server.py`起動 → バックグラウンド起動方式のバグ(`%%bash --bg`不安定)を
       `subprocess.Popen`方式に修正 — 2026-08-04
-- [ ] 修正版での`python -m pipeline --track track1 --n-episodes 2`疎通確認 **← 次のアクション**
+- [x] 修正版での`python -m pipeline --track track1 --n-episodes 2`疎通確認 — 2026-08-04完走
 - [x] 環境情報メモ: 本番採点環境=Python 3.10.12 / torch 2.11.0+cu130 / CUDA13.0 / GPU NVIDIA L4(24GB) / EGLレンダリング
 
+**ステップ1完了（2026-08-04）**
+
 ### ステップ2: SmolVLA LoRA学習（Colab Pro / L4、公式サンプル）
-- [ ] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行
+- [ ] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行 **← 進行中**
 - [ ] マージ済みモデル一式(zip)を取得
 
 ### ステップ3: MyPolicyへの組み込み・提出物作成
@@ -63,4 +65,4 @@
 
 ---
 
-**現在のブロッカー**: なし。次のアクションはColab上で修正版ノートブックの疎通確認セルを再実行すること。
+**現在のブロッカー**: なし。次のアクションは`examples/smolvla_libero_spatial_lora.ipynb`でのLoRA学習を進めること。
