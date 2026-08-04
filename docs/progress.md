@@ -66,11 +66,28 @@
       （front=俯瞰視点、wrist=手先アップの画像を実際に目視確認。MAJOR#3の懸念は解消）
       → 0%の原因はコードバグではなく、**LoRA学習タスク(Spatial 10種)とTrack1 exampleタスク
       (Object/Goal含む、L2〜L5難易度)の分布の違い**である可能性が高いという仮説に更新
-- [ ] **← 次のアクション**: これ以上ローカル診断を重ねず、実際にリーダーボードへ提出して
+- [x] 推論レイテンシ確認 — 2026-08-04、`validate_submission.py`のスモークテストで
+      **平均0.29秒・最大0.86秒**（10秒制約に大きく余裕あり）
+- [x] `validate_submission.py`で静的検査＋起動スモークテスト — 2026-08-04 **PASS（errors=0, warnings=1）**
+      警告は`nondeterministic`（Flow Matchingによる意図的な確率的挙動、対応不要）のみ
+- [x] ネットワーク遮断下でのモデルロード確認、Colab Pro L4の実際のコンピューティングユニット消費レート確認
+      → 未実施だが優先度低下（下記の実提出失敗の教訓の方が緊急だったため）
+
+**【重要インシデント】2026-08-04 誤った提出物での初回提出が失敗**:
+`1st/smolvla_libero_plus_spatial_lora_merged.zip`（モデル重みのみ、`policy_server.py`/
+`requirements.txt`なし）を誤って提出 → Omnicampus実採点で
+`struct.no_policy_server`エラーによりFAIL（public_score=0.0, private_score=0.0）。
+今日の提出回数を消費した可能性あり（要Omnicampus画面での確認）。
+
+**さらに`requirements.txt`自体にも別の欠陥が発覚**: `lerobot[smolvla] @ git+https://...`という
+git参照形式が、提出物バリデーションで「外部ソース（git+https:）の指定は禁止」として拒否されると判明
+（ローカルの`validate_submission.py`実行で検出）。PyPIに公式リリース済みの`lerobot==0.6.0`
+（gitタグv0.6.0と同一、smolvla extra含む）が存在することを確認し、`lerobot[smolvla]==0.6.0`に修正。
+修正後、正しい構造（`policy_server.py`+`requirements.txt`+`model_weights/`）でzip化し、
+ローカルバリデーションでPASSを確認済み。**次は正しいzipでの再提出**。
+
+- [ ] **← 次のアクション**: 正しいzip（PASS確認済み）をOmnicampusに再提出し、
       公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
-- [ ] ネットワーク遮断下でのモデルロード確認、Colab Pro L4の実際のコンピューティングユニット消費レート確認
-- [ ] 推論が10秒/リクエスト以内に収まることを確認（超過で即0点の重要制約）
-- [ ] `validate_submission.py`で静的検査＋起動スモークテスト
 
 ### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
 - [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）

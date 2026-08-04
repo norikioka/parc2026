@@ -13,6 +13,8 @@ Colabでの手順は`notebooks/parc2026_pre_setup.ipynb`、詳細は`README.md`�
 | `policy_server.py`をバックグラウンド起動しても`curl http://localhost:8000/health`が「接続拒否」、ログファイルも「存在しない」 | Colabの`%%bash --bg`マジックコマンドが不安定で、バックグラウンドプロセスが実際には起動処理に入れていないケースがあった（2026-08-04実際に発生・修正済み） | `%%bash --bg`をやめ、Pythonの`subprocess.Popen(..., stdout=log_file, stderr=subprocess.STDOUT)`で直接起動する方式に変更。`proc.poll()`でプロセスの生死を確認しながら待つことで、ログファイル未作成の問題自体を回避できる |
 | （未発生・予防的メモ）ヘッドレスGPUレンダリング(EGL)関連のエラー | ドライバとGLライブラリのバージョンが完全一致していないと発生しうる（[Zenn記事(inrjin氏)](https://zenn.dev/inrjin/articles/437a359e3ffcd7)より、2026-08-04調査で確認） | ドライバ・GLライブラリのバージョンを揃える。現行の`setup.sh`は`~/.libero/config.yaml`を自動生成するため、同記事にあった「config.yaml未生成→import時に対話式質問でEOFエラー」自体は基本的に解消済みのはず |
 | （未発生・予防的メモ）推論サーバ起動後にOOM | 推論サーバ(JAX等)のGPUメモリ先取りと、LIBERO-Plusのレンダリングのメモリ競合が原因になりうる（同Zenn記事より） | `MEM_FRACTION`等でメモリ確保量を調整する、または推論とレンダリングでGPUを分離する |
+| Omnicampus実採点で`struct.no_policy_server`エラー、public/private score=0.0 | `policy_server.py`・`requirements.txt`を含まない、モデル重みのみのzip（学習ノートブックが自動生成する`*_merged.zip`）を誤って提出した（2026-08-04実際に発生） | 提出物は必ず`policy_server.py`＋`requirements.txt`＋`model_weights/`の3点を正しい構造でzip化したものにする。**提出前に必ずローカルの`validate_submission.py`でPASSを確認してから**Omnicampusにアップロードする（1日1回の提出制限を無駄にしないため） |
+| `validate_submission.py`で「外部ソース（スキーム 'git+https:'）の指定は禁止です」エラー | `requirements.txt`に`lerobot[smolvla] @ git+https://github.com/huggingface/lerobot.git@v0.6.0`のようなgit直接参照を書いていた（2026-08-04実際に発生） | PyPIに公開されている同一バージョンを使う。今回は`lerobot==0.6.0`がgitタグv0.6.0と同一内容でPyPI公開されており`smolvla`extraも含まれていたため、`lerobot[smolvla]==0.6.0`に変更して解決 |
 
 ---
 
