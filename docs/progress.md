@@ -106,8 +106,18 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
 4. torch依存の衝突リスクを確認 → `lerobot==0.6.0`の制約は`torch<2.12.0,>=2.7`で、
    本番環境のtorch2.11.0+cu130と既に互換、問題なし
 
-- [ ] **← 次のアクション**: Colabで上記1〜3を反映したzipを作成し、
-      **オフライン起動確認**（新規追加セクション7.5）→ ローカル`validate_submission.py`再PASS →
+- [x] **オフライン起動確認、Colabを待たずローカルMac(CPU)で先行実施・PASS** — 2026-08-05
+      `uv run --with "lerobot[smolvla]==0.6.0"`＋`HF_HUB_OFFLINE=1`で、モデルロード→前処理構築→推論まで
+      実際にネットワーク遮断下で完走することを確認。この過程で**新たな重大バグを発見**：
+      `config.vlm_model_name`の修正だけでは不十分で、`make_pre_post_processors()`が読む
+      `policy_preprocessor.json`の`tokenizer_processor`ステップにも独立してHub参照
+      (`HuggingFaceTB/SmolVLM2-500M-Video-Instruct`)がハードコードされており、
+      これが直っていないと採点環境で起動失敗していた。`preprocessor_overrides`で
+      同じローカルパスに向ける修正を`policy_server_smolvla_full.py`に反映し、
+      修正後のローカル再検証でPASS（詳細は`docs/env_setup.md`）。
+      もし気づかず提出していたら8/4と同種の失敗で提出1回を無駄にしていた可能性が高い。
+- [ ] **← 次のアクション**: Colab側でも同じ流れ（セクション7.5）を実行し、GPU実機でも
+      オフライン起動確認・`validate_submission.py`再PASSを確認 →
       `python -m pipeline`で回帰確認（性能measureではなくクラッシュ有無・グリッパー動作の確認）→
       問題なければ次回提出時に公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
 

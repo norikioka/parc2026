@@ -104,8 +104,21 @@ class MyPolicy(BasePolicy):
         self.policy.to(self.device)
         self.policy.eval()
 
+        # 【2026-08-05 ローカル(Mac/CPU)でHF_HUB_OFFLINE=1下の実行を検証して発見】
+        # config.vlm_model_nameとは別に、model_dir/policy_preprocessor.jsonの
+        # tokenizer_processorステップにもHub文字列("HuggingFaceTB/SmolVLM2-...")が
+        # 独立してハードコードされており、make_pre_post_processors内部で
+        # AutoTokenizer.from_pretrained(tokenizer_name)としてHubアクセスを試みる。
+        # config.vlm_model_nameの修正だけでは防げないため、preprocessor_overridesで
+        # 同じローカルパスに向ける必要がある(この修正がないと採点環境でここだけ起動失敗する)。
+        preprocessor_overrides = {}
+        if vlm_local_dir.exists():
+            preprocessor_overrides["tokenizer_processor"] = {
+                "tokenizer_name": str(vlm_local_dir.resolve())
+            }
+
         self.preprocessor, self.postprocessor = make_pre_post_processors(
-            config, pretrained_path=model_dir
+            config, pretrained_path=model_dir, preprocessor_overrides=preprocessor_overrides
         )
 
         self.instruction = ""
