@@ -51,6 +51,12 @@
 - [x] Colabにデプロイし`policy_server.py`起動・`/health`確認 — 2026-08-04
 - [x] `python -m pipeline --track track1 --n-episodes 2`完走（クラッシュなし） — 2026-08-04
       **ただし全4タスク成功率0%**（1442秒、全エピソード600/600ステップまで到達し未成功）
+      **【2026-08-05 重要な注記】この時点のColab venvは`python3.10 -m venv`で作られており、
+      後日`lerobot[smolvla]==0.6.0`はPython 3.10に`pip install`できないと判明した(下記参照)。
+      つまりこの「完走」は、a) 実際は別のPython(学習ノートブック側でlerobotが入ったシステムPython3.12等)を
+      見ていた、b) 何らかの理由で当時は解決できていた、のいずれかであり、**本番構成(python3.10 venv)での
+      実績として鵜呑みにできない**。0%という結果の原因究明(タスク分布の違い説等)も、その前提ごと
+      再検証が必要**
 - [x] **criticによる厳格レビュー実施**（Fable/Opus相当） — 2026-08-04
       CRITICAL 0件、MAJOR 8件、MINOR 5件。クォータニオン変換・状態ベクトル構築・LeRobot API呼び出しは
       LeRobot v0.6.0実ソースと1行ずつ突き合わせ、完全に正確と確認された（ACCEPT-WITH-RESERVATIONS判定）
@@ -116,7 +122,19 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
       同じローカルパスに向ける修正を`policy_server_smolvla_full.py`に反映し、
       修正後のローカル再検証でPASS（詳細は`docs/env_setup.md`）。
       もし気づかず提出していたら8/4と同種の失敗で提出1回を無駄にしていた可能性が高い。
-- [ ] **← 次のアクション**: Colab側でも同じ流れ（セクション7.5）を実行し、GPU実機でも
+- [x] **【最重大バグ・対応完了】`lerobot[smolvla]==0.6.0`はPython 3.10に`pip install`不可と判明・
+      vendoring方式で解決** — 2026-08-05
+      公式README改訂で本番Python 3.10.12が確定 → PyPIメタデータで`lerobot>=0.5.0`はすべて
+      `Requires-Python>=3.12`と確認（3.10対応は0.4.4が最後だが、0.4.4は0.6.0形式の保存モデルを読めない
+      API構造）。lerobot 0.6.0ソースのうちPython 3.12専用構文・API(PEP695ジェネリクス4箇所、
+      `typing.Self`/`typing.Unpack`8箇所)をPython 3.10互換に書き換え、`src/parc2026/vendor/lerobot/`に
+      同梱（Apache-2.0、`vendor/NOTICE_PARC2026_MODIFICATIONS.md`に変更内容明記）。
+      `planner`によるロードマップ再設計・`critic`(Opus)による2段階レビュー(GO→REVISE、
+      指摘4件対応済み)を経て実装。`requirements_smolvla.txt`も実測`pip freeze`ベースに全面書き換え
+      （torch/torchvisionの扱い、networkxの罠など詳細は`docs/env_setup.md`）。
+      **クリーンルーム検証(新規Python 3.10 venv・HF_HUB_OFFLINE=1・実際のpolicy_server.py)で
+      /health→/reset→/actまでPASS**。古い`my_policy_smolvla.py`(未修正の参照用ファイル)は削除。
+- [ ] **← 次のアクション**: Colab側で同じ流れ（セクション7.5）を実行し、GPU実機でも
       オフライン起動確認・`validate_submission.py`再PASSを確認 →
       `python -m pipeline`で回帰確認（性能measureではなくクラッシュ有無・グリッパー動作の確認）→
       問題なければ次回提出時に公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）

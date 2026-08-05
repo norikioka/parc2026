@@ -1,32 +1,90 @@
 # submission_template/requirements.txt に配置する依存関係。
 #
-# 【重要・2026-08-04 criticレビューMAJOR#2で判明】
-# lerobotを単に`lerobot`とだけ書くと、SmolVLAPolicyが要求する`transformers`
-# (require_package("transformers", extra="smolvla")、
-#  lerobot/policies/smolvla/modeling_smolvla.pyで確認済み)が入らず、
-# MyPolicy.__init__()実行時に即座にImportErrorでサーバーが起動しない。
-# 必ず [smolvla] extra を明示すること。
+# 【2026-08-05 重大な方針転換・critic Opusレビュー反映】
+# `lerobot[smolvla]==0.6.0`はPyPI上 Requires-Python>=3.12 であり、
+# 本番採点環境(公式README確定: Python 3.10.12)には pip install できないと判明した。
+# そのため lerobot 本体は pip に頼らず、Python 3.10互換にパッチした上で
+# `vendor/lerobot/`にソースごと同梱し、policy_server.py側でsys.path経由でimportする
+# (改変内容は vendor/NOTICE_PARC2026_MODIFICATIONS.md 参照)。
+# → このrequirements.txtには「lerobotを動かすために必要な、lerobot自身の実行時依存」を
+#   個別に列挙する。バージョンは推測ではなく、実際にPython 3.10 + HF_HUB_OFFLINE=1で
+#   モデルロード→推論まで動作確認した組み合わせ(`pip freeze`実測値)をそのまま使う。
 #
-# バージョンはSmolVLA LoRA学習ノートブックが使用した v0.6.0 に合わせている
-# (examples/smolvla_libero_spatial_lora.ipynb の LEROBOT_TAG = "v0.6.0")。
-#
-# 【2026-08-04追記】提出物のvalidate_submission.pyで実際にエラーが出て判明:
-# 「外部ソース（スキーム 'git+https:'）の指定は禁止です」というバリデーションエラーで
-# 提出そのものが弾かれた(FAIL)。git+https://形式は使用禁止。
-# PyPIに公式リリースの lerobot==0.6.0 (gitタグv0.6.0と同一)が存在し、smolvla extraも
-# 含まれていることを確認済みのため、PyPI版のバージョン指定に変更した。
+# 【torch/torchvisionについて】
+# 採点環境は`--system-site-packages`付きvenvにこのrequirements.txtをinstallする仕様
+# (公式README確定)。requirements.txtに書かなかったライブラリはプリインストール版
+# (torch==2.11.0+cu130)がそのまま使われる。torchを明示的に書くとCPU版に静かに
+# 差し替わり10秒制約で致命傷になるため、**torchは絶対に書かない**。
+# torchvisionはプリインストール一覧に無いため明示が必要。実測で動作確認済みの
+# torchvision==0.26.0はtorch 2.11.0系向けのビルドであり、既存のtorch(2.11.0+cu130)を
+# 壊さずに解決されることを確認済み。
 
 # ポリシーサーバーの依存（テンプレート既定、削除しないこと）
 fastapi>=0.68
 uvicorn>=0.15
 msgpack>=1.0
-numpy>=1.19
 
-# SmolVLA推論に必要な依存(PyPI版、git+https://は禁止事項のため使用不可)
-lerobot[smolvla]==0.6.0
+# --- 以下、lerobot(vendor同梱)の実行時依存。2026-08-05にPython 3.10.20 + uvで
+#     実測した組み合わせ(pip freeze)。torch/torchvision以外は現時点でバージョン幅を
+#     持たせず固定し、動作確認済みの構成からの逸脱を防ぐ ---
+numpy==2.2.6
+torchvision==0.26.0
+transformers==5.5.4
+tokenizers==0.22.2
+safetensors==0.8.0
+accelerate==1.14.0
+huggingface_hub==1.26.0
+draccus==0.10.0
+gymnasium==1.3.0
+Farama-Notifications==0.0.6
+num2words==0.5.14
+einops==0.8.2
+opencv-python-headless==4.13.0.92
+pillow==12.3.0
+typing_extensions==4.16.0
+typing-inspect==0.9.0
+mypy_extensions==1.1.0
 
-# 評価環境のsetup.shはCPU版torchを入れる仕様(評価ハーネス自体はCPUで足りるため)。
-# 推論をGPU(本番はNVIDIA L4)で行うには、CUDA版torchが別途必要な可能性がある。
-# 次回Colab/setup.sh環境で `python -c "import torch; print(torch.cuda.is_available())"`
-# を確認し、Falseならバージョンを合わせた上でCUDA版を明示的に追加すること。
-# torch==2.11.0  # 必要に応じてコメント解除・CUDA版に差し替え
+# lerobot/draccusの間接依存(実測pip freezeより)
+annotated-doc==0.0.5
+anyio==4.14.2
+certifi==2026.7.22
+charset-normalizer==3.4.9
+click==8.4.2
+cloudpickle==3.1.2
+docopt==0.6.2
+exceptiongroup==1.3.1
+filelock==3.32.2
+fsspec==2026.7.0
+h11==0.16.0
+hf-xet==1.6.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
+Jinja2==3.1.6
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+mergedeep==1.3.4
+mpmath==1.3.0
+# 【2026-08-05】networkxは元のpip freezeでは3.6.1だったが、これはtorchも同時に
+# pipインストールしていた検証環境で解決された値でありPython>=3.11必須のため、
+# 本番Python 3.10では使えない。torch自体はrequirements.txtに書かず(プリインストール版を
+# 使うため)、networkxはtorchの間接依存としてイメージ側に既にあるはずなのでバージョン固定せず
+# 委ねる(lerobot自体がnetworkxを直接requireしている形跡は無い)。
+networkx
+packaging==25.0
+psutil==7.2.2
+Pygments==2.20.0
+pyyaml-include==1.4.1
+PyYAML==6.0.3
+regex==2026.7.19
+requests==2.34.2
+rich==15.0.0
+shellingham==1.5.4
+sympy==1.14.0
+termcolor==3.3.0
+toml==0.10.2
+tqdm==4.70.0
+typer==0.27.1
+urllib3==2.7.0

@@ -64,7 +64,19 @@ class BasePolicy(ABC):
 
 class MyPolicy(BasePolicy):
     def __init__(self):
+        import sys
         from pathlib import Path
+
+        # 【2026-08-05 critic Opusレビュー・実ソース検証済み】評価環境のPython 3.10.12には
+        # `lerobot[smolvla]==0.6.0`をpip installできない(PyPI上Requires-Python>=3.12のため)。
+        # 一方、学習済みモデルはlerobot 0.6.0のPolicyProcessorPipeline形式で保存されており、
+        # Python 3.10対応の旧バージョン(<=0.4.4)では読めない。そのため、lerobot 0.6.0を
+        # Python 3.10互換にパッチした上で vendor/lerobot/ に同梱し、pip install不要でこちらを
+        # importする(改変内容はvendor/NOTICE_PARC2026_MODIFICATIONS.md参照)。
+        # site-packages側に何か入っていた場合でもvendor版を優先させるため、先頭(index 0)に挿入する。
+        vendor_dir = Path(__file__).parent / "vendor"
+        if vendor_dir.exists():
+            sys.path.insert(0, str(vendor_dir.resolve()))
 
         import torch
         from lerobot.configs import PreTrainedConfig
