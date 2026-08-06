@@ -200,8 +200,10 @@ treatment_b・treatment_cの両方がcontrolを上回る方向で一致してお
       image_transforms版。ローカルn=10で87.5%、`validate_submission.py`でPASS済み
       （errors=0, warnings=1[非決定的出力、想定内]、act latency mean=0.374s max=1.106s）。
       **本番スコアは未検証**（ローカルと本番は単位が異なる、`docs/strategy.md`参照）
-- [ ] **← 次のアクション（8/7予定）**: 提出候補2をどこかのタイミングで提出し、本番スコアを確認する。
-      さらに2パターン（例: treatment_c版、または今日の結果を踏まえた新しい設定）を用意する。
+- [x] **`submission_treatment_b_0.875local.zip`をOmnicampusへ提出** — 2026-08-06
+      現行の0.09397を上書き（最新採用方式）。**結果待ち**
+- [ ] **← 次のアクション**: 本番スコアを確認 → `docs/progress.md`に記録 →
+      さらに2パターン（例: treatment_c版、または今回の結果を踏まえた新しい設定）を用意する。
       「1つ出した後の点数を見てから、8/8以降の進め方を決めてよい」とユーザーから確認済み
 
 ### ステップ5: 提出前の最終チェック・提出
