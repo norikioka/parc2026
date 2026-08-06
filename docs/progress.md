@@ -200,11 +200,21 @@ treatment_b・treatment_cの両方がcontrolを上回る方向で一致してお
       image_transforms版。ローカルn=10で87.5%、`validate_submission.py`でPASS済み
       （errors=0, warnings=1[非決定的出力、想定内]、act latency mean=0.374s max=1.106s）。
       **本番スコアは未検証**（ローカルと本番は単位が異なる、`docs/strategy.md`参照）
-- [x] **`submission_treatment_b_0.875local.zip`をOmnicampusへ提出** — 2026-08-06
-      現行の0.09397を上書き（最新採用方式）。**結果待ち**
-- [ ] **← 次のアクション**: 本番スコアを確認 → `docs/progress.md`に記録 →
-      さらに2パターン（例: treatment_c版、または今回の結果を踏まえた新しい設定）を用意する。
-      「1つ出した後の点数を見てから、8/8以降の進め方を決めてよい」とユーザーから確認済み
+- [x] **`submission_treatment_b_0.875local.zip`をOmnicampusへ提出、本番スコア0.0836** — 2026-08-06
+      **現行(0.09397)より悪化**。ローカル成功率(87.5%)は本番の隠しタスクでの性能をほとんど
+      予測できていなかったことが判明。ローカル4例タスクのうち3つ(トマトソース/牛乳/コンロ)は
+      SPATIAL_TASK_NAMES(黒いボウルのみ10種)の学習セットに一度も含まれていないと発覚。
+      Spatial限定学習の汎化不足が疑われる（ユーザー指摘、2026-08-06）
+- [x] **提出候補3**: `submission_treatment_c_0.85local.zip`（688MB）——episodes_per_task=20版。
+      ローカルn=10で85.0%、validate_submission.py PASS済み。**Omnicampusへ提出済み、結果待ち**
+- [x] **【抜本的な変更】全40タスクでの学習に着手** — 2026-08-06
+      `train_app.py`に`all_tasks`フラグを追加。SPATIAL_TASK_NAMES(黒いボウル10種)限定ではなく、
+      `lerobot/libero_plus`の全40タスクを対象に学習(`arm=broad`、episodes_per_task=5、
+      steps=6000[epoch数をcontrolと揃えるため増加]、image_transformsは無し単体で検証)。
+      汎用性を重視する方向への転換（ユーザー指摘、2026-08-06: 「黒いボウルだけの学習は
+      良くないのでは」）
+- [ ] **← 次のアクション**: treatment_cの本番スコアを確認 → broadアームの学習・評価完了を待つ →
+      `docs/step4_experiments.csv`とあわせて複数候補を比較し、軸にするモデルを決める
 
 ### ステップ5: 提出前の最終チェック・提出
 - [ ] `evaluate.py`でzipをエンドツーエンドローカル検証

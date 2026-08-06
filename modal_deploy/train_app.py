@@ -53,6 +53,7 @@ def train(
     steps: int = 3000,
     episodes_per_task: int = 5,
     image_transforms: bool = False,
+    all_tasks: bool = False,
     batch_size: int = 1,
     seed: int = 42,
 ):
@@ -132,16 +133,25 @@ def train(
         name = task_cell[0] if not isinstance(task_cell, str) and len(task_cell) else task_cell
         task_to_episodes[str(name)].append(int(episode_index))
 
+    # 【2026-08-06】Spatial(黒いボウルのみ10種)限定学習だと、Track1の公開exampleタスク4件のうち
+    # 3件(トマトソース/牛乳/コンロ)が学習セットに一度も含まれないと判明。汎用性を重視し、
+    # all_tasks=Trueならデータセット内の全タスクを対象にする(「抜本的な変更」候補、2026-08-06ユーザー指示)。
+    task_names = list(task_to_episodes.keys()) if all_tasks else SPATIAL_TASK_NAMES
     available_by_normalized = {normalize_task_name(t): t for t in task_to_episodes}
     selected_by_task = {}
-    for task_name in SPATIAL_TASK_NAMES:
+    for task_name in task_names:
         actual_task = available_by_normalized.get(normalize_task_name(task_name))
-        assert actual_task is not None, f"Spatial task not found: {task_name}"
+        if actual_task is None:
+            if all_tasks:
+                actual_task = task_name  # all_tasksはtask_to_episodesのキーそのものなので必ず存在する
+            else:
+                raise AssertionError(f"Spatial task not found: {task_name}")
         selected_by_task[actual_task] = choose_evenly_spaced(
             task_to_episodes[actual_task], episodes_per_task
         )
     episode_indices = sorted(i for v in selected_by_task.values() for i in v)
-    print(f"Training data: 10 tasks x {episodes_per_task} episodes = {len(episode_indices)} episodes")
+    print(f"Training data: {len(selected_by_task)} tasks x up to {episodes_per_task} episodes "
+          f"= {len(episode_indices)} episodes (all_tasks={all_tasks})")
 
     # --- 3. lerobot-train実行 ---
     mixed_precision = "bf16" if torch.cuda.is_bf16_supported() else "fp16"
@@ -264,7 +274,8 @@ def train(
     with open(MERGED_MODEL_DIR / "train_args_record.json", "w") as f:
         json.dump({
             "arm_name": arm_name, "steps": steps, "episodes_per_task": episodes_per_task,
-            "image_transforms": image_transforms, "batch_size": batch_size, "seed": seed,
+            "image_transforms": image_transforms, "all_tasks": all_tasks,
+            "num_tasks": len(selected_by_task), "batch_size": batch_size, "seed": seed,
             "episode_indices": episode_indices,
         }, f, indent=2)
 
