@@ -64,6 +64,7 @@ class BasePolicy(ABC):
 
 class MyPolicy(BasePolicy):
     def __init__(self):
+        import os
         import sys
         from pathlib import Path
 
@@ -110,7 +111,10 @@ class MyPolicy(BasePolicy):
         # 既定の50だと600ステップのエピソード中わずか12回しか画像を見ずに開ループで動くことになり、
         # LIBERO-Plus型の摂動タスクでは途中でズレると修正できない。10に下げて再計画頻度を5倍にする
         # (計算コストは変わらない。実測レイテンシ平均0.29秒/最大0.86秒に対し10秒制約の余裕は十分)。
-        config.n_action_steps = 10
+        # 【2026-08-06 critic Opusレビュー】この変更が成功率を上げる一方、滑らかさスコア(jerk/SPARC)を
+        # 悪化させている可能性が未検証のまま残っていた。環境変数で上書きできるようにしてA/B検証する
+        # (未設定時は既定の10のまま、提出物の挙動は変えない)。
+        config.n_action_steps = int(os.environ.get("PARC_N_ACTION_STEPS", "10"))
 
         self.policy = SmolVLAPolicy.from_pretrained(model_dir, config=config)
         self.policy.to(self.device)

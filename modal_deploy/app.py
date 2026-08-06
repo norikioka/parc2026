@@ -117,6 +117,91 @@ def offline_check():
         print("=== OFFLINE CHECK: FAIL ===")
 
 
+@app.function(image=image, gpu="L4", timeout=600)
+def build_and_validate_submission():
+    """submission_template/一式をzip化し、公式validate_submission.pyで検証する。
+    PASSしたzipのバイト列を返す(呼び出し側でローカルに保存する)。"""
+    import shutil
+    import subprocess
+
+    zip_base = "/tmp/submission"
+    shutil.make_archive(zip_base, "zip", root_dir="/workspace/submission_template")
+    zip_path = f"{zip_base}.zip"
+
+    result = subprocess.run(
+        ["/workspace/venv/bin/python", "validate_submission.py", zip_path],
+        cwd="/workspace",
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    print("=== validate_submission.py stdout ===")
+    print(result.stdout)
+    print("=== validate_submission.py stderr ===")
+    print(result.stderr)
+    print("returncode:", result.returncode)
+
+    with open(zip_path, "rb") as f:
+        zip_bytes = f.read()
+    print(f"zip size: {len(zip_bytes) / 1024 / 1024:.1f} MB")
+
+    return result.returncode, zip_bytes
+
+
+@app.local_entrypoint()
+def save_submission():
+    returncode, zip_bytes = build_and_validate_submission.remote()
+    out_path = LOCAL_ROOT / "submission.zip"
+    with open(out_path, "wb") as f:
+        f.write(zip_bytes)
+    print(f"保存先: {out_path} ({len(zip_bytes) / 1024 / 1024:.1f} MB)")
+    if returncode == 0:
+        print("=== validate_submission.py: PASS ===")
+    else:
+        print("=== validate_submission.py: FAIL (returncode != 0) ===")
+
+
+@app.function(image=image, gpu="L4", timeout=1200)
+def n_action_steps_ab_test(n_action_steps: int):
+    """n_action_steps(50 vs 10)をtrack1 exampleタスクで比較する(提出不要)。
+    【2026-08-06 critic Opusレビュー】成功率を上げる意図の変更(50→10)が、滑らかさスコア
+    (jerk/SPARC)を悪化させている可能性が未検証だったため、A/Bで確認する。"""
+    import os
+    import subprocess
+    import time
+
+    log_path = f"/tmp/policy_server_n{n_action_steps}.log"
+    log_file = open(log_path, "w")
+    server_env = os.environ.copy()
+    server_env["PARC_N_ACTION_STEPS"] = str(n_action_steps)
+    proc = subprocess.Popen(
+        ["/workspace/venv/bin/python", "policy_server.py", "--port", "8000"],
+        cwd="/workspace/submission_template",
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        env=server_env,
+    )
+    time.sleep(5)
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "/workspace/LIBERO-plus:/workspace:/workspace/compe"
+    result = subprocess.run(
+        ["/workspace/venv/bin/python", "-m", "pipeline",
+         "--server-url", "http://localhost:8000", "--track", "track1", "--n-episodes", "2", "--max-steps", "600"],
+        cwd="/workspace",
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=1000,
+    )
+    print(f"=== n_action_steps={n_action_steps}: pipeline stdout ===")
+    print(result.stdout[-4000:])
+    print("returncode:", result.returncode)
+
+    proc.terminate()
+    log_file.close()
+
+
 @app.function(image=image, gpu="L4", timeout=1200)
 def pipeline_smoke_test():
     """LIBERO-Plus実環境(GPU)でtrack1を2エピソード回し、クラッシュしないか確認する。"""

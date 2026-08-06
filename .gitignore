@@ -29,5 +29,9 @@ wandb/
 experiments/
 
 
+# 提出用zip(数百MB、モデル重み込みのためgit管理外。再現はvendoringされたコード+1st/のモデルから可能)
+submission.zip
+submission_*.zip
+
 # macOS
 .DS_Store
