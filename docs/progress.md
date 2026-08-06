@@ -41,7 +41,7 @@
 
 ### ステップ2: SmolVLA LoRA学習（Colab Pro / L4、公式サンプル）
 - [x] `examples/smolvla_libero_spatial_lora.ipynb` をColabで実行・完走 — 2026-08-04
-- [x] マージ済みモデル一式(zip)を取得 — `~/projects/PARC/1st/smolvla_libero_plus_spatial_lora_merged/`
+- [x] マージ済みモデル一式(zip)を取得 — `~/projects/academic/parc2026/1st/smolvla_libero_plus_spatial_lora_merged/`
       （Base 66.67%→LoRA後73.33%、+6.67pt。ただし評価は1タスク3エピソードのみでノイズ大、参考値）
 
 **ステップ2完了（初回、2026-08-04）。計算資源温存のため再学習は保留、詳細は`docs/strategy.md`参照**
@@ -134,10 +134,19 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
       （torch/torchvisionの扱い、networkxの罠など詳細は`docs/env_setup.md`）。
       **クリーンルーム検証(新規Python 3.10 venv・HF_HUB_OFFLINE=1・実際のpolicy_server.py)で
       /health→/reset→/actまでPASS**。古い`my_policy_smolvla.py`(未修正の参照用ファイル)は削除。
-- [ ] **← 次のアクション**: Colab側で同じ流れ（セクション7.5）を実行し、GPU実機でも
-      オフライン起動確認・`validate_submission.py`再PASSを確認 →
-      `python -m pipeline`で回帰確認（性能measureではなくクラッシュ有無・グリッパー動作の確認）→
-      問題なければ次回提出時に公式参考スコア0.0633と比較する（`docs/strategy.md`の判断ゲート参照）
+- [x] **【計算基盤の変更】Colab→Modalに切り替え、GPU実機での検証完了** — 2026-08-06
+      Colabのランタイム切断が繰り返し発生し、かつ「どのみちフルリビルドが必要」な状況になったため、
+      CLIデプロイ完結型のModal(https://modal.com)に切り替えた（ノートブック実行の往復を排除）。
+      公式Dockerfileを本番相当(CUDA13.0/GPU)に改造して`modal_deploy/`にベンダリング。
+      1. **オフライン起動確認(GPU実機・PASS)**: CUDA 13.0.3・torch 2.11.0+cu130
+         (`cuda.is_available()=True`、CPU版に巻き戻っていないことを確認)・`HF_HUB_OFFLINE=1`下で
+         `/health`→`/reset`→`/act`まで完走。act latency 1.05秒（10秒制約に大きく余裕）
+      2. **LIBERO-Plus実環境での疎通確認(GPU実機・PASS)**: `python -m pipeline --track track1
+         --n-episodes 2`で**track1総合成功率62.5%**(4タスク中: 50%/50%/100%/50%)を記録。
+         タイムアウト無し。**8/4の「全4タスク成功率0%」は環境側の不具合(VLM Hub参照・Python版非互換)が
+         原因で、モデル自体は機能していたことがこれで裏付けられた**（参考スコア0.0633を大幅に上回る）
+      （n=2エピソードのため統計的にはまだノイズが大きい参考値、詳細は`docs/env_setup.md`・`modal_deploy/`）
+- [ ] **← 次のアクション**: 提出用zip作成 → ローカル`validate_submission.py`でPASS確認 → 提出
 
 ### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
 - [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）

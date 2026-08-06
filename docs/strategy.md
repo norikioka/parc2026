@@ -19,7 +19,7 @@ Colab Proのコンピューティングユニットは約30時間分、RunPodは
 
 `examples/smolvla_libero_spatial_lora.ipynb`をColab Pro(L4)で実行、完走。
 LIBERO-Spatial全体で **Base 66.67% → LoRA後 73.33%（+6.67pt）** の改善。
-成果物は`~/projects/PARC/1st/`に保存（`smolvla_libero_plus_spatial_lora_merged/`＝マージ済みモデル一式、
+成果物は`~/projects/academic/parc2026/1st/`に保存（`smolvla_libero_plus_spatial_lora_merged/`＝マージ済みモデル一式、
 `libero_spatial_comparison.csv`＝タスク別の前後比較）。
 
 **注意**: ノートブックの既定評価は1タスクあたり3エピソードのみで、1回の成否で33ポイント動く粗さがある

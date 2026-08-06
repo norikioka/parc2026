@@ -42,7 +42,7 @@ GitHub リポジトリ (public: norikioka/parc2026)
 Python 3.12を`uv`で管理。ローカルはコード編集・軽量テスト専用。
 
 ```bash
-cd ~/projects/PARC
+cd ~/projects/academic/parc2026
 uv sync              # pyproject.toml の依存関係をインストール
 uv run pytest        # テスト実行
 ```

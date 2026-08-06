@@ -1,0 +1,35 @@
+# PARC2026 本番相当(GPU/CUDA13.0)環境。公式Dockerfile(Dockerfile.official)を
+# README「本番相当（GPU）を手元で再現する場合」の指示通りに改造したもの。
+# 差分: 1) ベースイメージをCUDA13.0対応に 2) setup.shのtorchをcu130版に 3) MUJOCO_GL=egl
+# 4) COPY . /workspaceの代わりにgit cloneする(Modalのbuild contextにこのディレクトリしか無いため)
+
+FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV MUJOCO_GL=egl
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 python3.10-venv python3-pip \
+    libosmesa6 libosmesa6-dev \
+    libgl1 libglfw3 libglew-dev \
+    libegl1 \
+    libsm6 libxext6 libxrender-dev \
+    libglib2.0-0 \
+    libmagickwand-dev \
+    build-essential cmake git wget curl zip unzip ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+RUN git clone --depth 1 https://github.com/matsuolab/PARC2026_pre.git .
+
+# 本番相当のGPU torch(cu130)に差し替える
+RUN sed -i 's|"torch==2.11.0+cpu" --index-url https://download.pytorch.org/whl/cpu|"torch==2.11.0" --index-url https://download.pytorch.org/whl/cu130|' setup.sh
+
+RUN bash setup.sh
+
+ENV PATH="/workspace/venv/bin:${PATH}"
+ENV PYTHONPATH="/workspace/LIBERO-plus:/workspace:/workspace/compe"
+ENV LIBERO_ROOT="/workspace/LIBERO-plus"
+
+CMD ["bash"]

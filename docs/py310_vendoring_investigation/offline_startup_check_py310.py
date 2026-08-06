@@ -25,7 +25,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 REPO_ROOT = Path(__file__).resolve()
-PARC_ROOT = Path("/Users/norikioka/projects/PARC")
+PARC_ROOT = Path("/Users/norikioka/projects/academic/parc2026")
 model_dir = str((PARC_ROOT / "1st" / "smolvla_libero_plus_spatial_lora_merged").resolve())
 vlm_local_dir = PARC_ROOT / "src" / "parc2026" / "vlm_assets"
 
