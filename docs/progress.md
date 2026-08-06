@@ -220,9 +220,23 @@ treatment_b・treatment_cの両方がcontrolを上回る方向で一致してお
       「黒いボウルだけの学習は良くないのでは」）。**ローカルn=10で87.5%**
       （Spatial学習で一度も見ていない「トマトソース」タスクが100%——学習タスク拡大の効果が
       示唆される）。`submission_broad_0.875local.zip`作成・validate_submission.py PASS・
-      **Omnicampusへ提出済み、結果待ち**
-- [ ] **← 次のアクション**: broadの本番スコアを確認。ノイズ幅(±0.02程度)を踏まえ、
-      明確にそれを超える改善かどうかで判断する
+      **Omnicampusへ提出、本番スコア0.12544（100人中93位）**。ノイズ幅(±0.022)を明確に超える
+      初めての実質的な改善。「黒いボウルだけの学習は汎化しない」という仮説が実証された
+
+- [x] **broadを土台にした第2ラウンドの実験** — 2026-08-06、Modal上で3アーム追加学習・評価
+      （`train_app.py`に`freeze_vision_encoder`/`lora_r`/`lora_alpha`をパラメータ化）
+
+  | アーム | 設定 | ローカル成功率(n=10) |
+  |---|---|---|
+  | broad（基準） | 全40タスク、5episodes/task | 87.5% |
+  | broad_transforms | broad + image_transforms | 85.0% |
+  | **broad_unfrozen** | **broad + 視覚エンコーダの凍結解除** | **90.0%（最高）** |
+  | broad_ep20 | broad + episodes_per_task=20 | 77.5%（最低） |
+
+  最良のbroad_unfrozenを`submission_broad_unfrozen_0.9local.zip`としてzip化・
+  validate_submission.py PASS・**Omnicampusへ提出済み、採点中**
+
+- [ ] **← 次のアクション**: broad_unfrozenの本番スコアを確認して判断
 
 ### ステップ5: 提出前の最終チェック・提出
 - [ ] `evaluate.py`でzipをエンドツーエンドローカル検証

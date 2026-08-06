@@ -54,6 +54,9 @@ def train(
     episodes_per_task: int = 5,
     image_transforms: bool = False,
     all_tasks: bool = False,
+    freeze_vision_encoder: bool = True,
+    lora_r: int = 16,
+    lora_alpha: int = 16,
     batch_size: int = 1,
     seed: int = 42,
 ):
@@ -87,8 +90,6 @@ def train(
     LEARNING_RATE = 3e-4
     FINAL_LEARNING_RATE = 3e-5
     WARMUP_STEPS = min(100, steps // 10 or 1)
-    LORA_R = 16
-    LORA_ALPHA = 16
     LOG_FREQ = 10
 
     OUTPUT_DIR = Path(f"/vol/{arm_name}/outputs")
@@ -166,8 +167,10 @@ def train(
         "--policy.input_features=null",
         "--policy.output_features=null",
         "--policy.empty_cameras=0",
-        "--policy.freeze_vision_encoder=true",
-        "--policy.train_expert_only=true",
+        f"--policy.freeze_vision_encoder={'true' if freeze_vision_encoder else 'false'}",
+        # freeze_vision_encoder=falseの場合、train_expert_onlyもfalseにしないと
+        # 視覚エンコーダの解凍自体が意味を持たない(VLM側が学習対象から除外されたままになる)
+        f"--policy.train_expert_only={'true' if freeze_vision_encoder else 'false'}",
         f"--policy.optimizer_lr={LEARNING_RATE}",
         f"--policy.scheduler_decay_lr={FINAL_LEARNING_RATE}",
         f"--policy.scheduler_warmup_steps={WARMUP_STEPS}",
@@ -193,8 +196,8 @@ def train(
         f"--log_freq={LOG_FREQ}",
         "--wandb.enable=false",
         "--peft.method_type=LORA",
-        f"--peft.r={LORA_R}",
-        f"--peft.lora_alpha={LORA_ALPHA}",
+        f"--peft.r={lora_r}",
+        f"--peft.lora_alpha={lora_alpha}",
     ]
 
     env = os.environ.copy()
@@ -275,6 +278,7 @@ def train(
         json.dump({
             "arm_name": arm_name, "steps": steps, "episodes_per_task": episodes_per_task,
             "image_transforms": image_transforms, "all_tasks": all_tasks,
+            "freeze_vision_encoder": freeze_vision_encoder, "lora_r": lora_r, "lora_alpha": lora_alpha,
             "num_tasks": len(selected_by_task), "batch_size": batch_size, "seed": seed,
             "episode_indices": episode_indices,
         }, f, indent=2)
