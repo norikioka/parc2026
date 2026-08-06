@@ -146,7 +146,13 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
          タイムアウト無し。**8/4の「全4タスク成功率0%」は環境側の不具合(VLM Hub参照・Python版非互換)が
          原因で、モデル自体は機能していたことがこれで裏付けられた**（参考スコア0.0633を大幅に上回る）
       （n=2エピソードのため統計的にはまだノイズが大きい参考値、詳細は`docs/env_setup.md`・`modal_deploy/`）
-- [ ] **← 次のアクション**: 提出用zip作成 → ローカル`validate_submission.py`でPASS確認 → 提出
+- [x] **提出用zip作成・Omnicampusへ提出** — 2026-08-06
+      Modal(GPU実機)で`submission_template/`一式(policy_server.py+requirements.txt+model_weights/+
+      vendor/lerobot/)をzip化し、公式`validate_submission.py`でPASS確認
+      (errors=0, warnings=1[非決定的出力の警告のみ、想定内]、act latency mean=0.383s max=1.134s)。
+      `submission.zip`(688MB)をOmnicampusにアップロード。**結果待ち**
+- [ ] **← 次のアクション**: Omnicampusの採点結果を確認 → public/private scoreを記録 →
+      次回提出の要否を判断（詳細は`docs/strategy.md`のロードマップ参照）
 
 ### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
 - [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）
