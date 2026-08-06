@@ -87,7 +87,10 @@ class MyPolicy(BasePolicy):
         self.torch = torch
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        model_dir = str((Path(__file__).parent / "model_weights").resolve())
+        # 【2026-08-06 planner設計】ステップ4のA/B実験で複数モデルを切り替えられるよう環境変数化。
+        # 未設定時は既定の"model_weights"のまま(提出物の挙動は変わらない)。
+        model_dir_name = os.environ.get("PARC_MODEL_DIR", "model_weights")
+        model_dir = str((Path(__file__).parent / model_dir_name).resolve())
         config = PreTrainedConfig.from_pretrained(model_dir)
         config.device = self.device
 
@@ -98,7 +101,7 @@ class MyPolicy(BasePolicy):
         # モデル本体の重みは1st/.../model.safetensors自体に既に含まれている(500個中490個のテンソルが
         # vlm_with_expert.*)ため、Hubから取得すべきはconfig/tokenizer等の軽量ファイルのみ。
         # これをmodel_weights/vlm/にローカル同梱し、Hubアクセスを完全に回避する。
-        vlm_local_dir = Path(__file__).parent / "model_weights" / "vlm"
+        vlm_local_dir = Path(__file__).parent / model_dir_name / "vlm"
         if vlm_local_dir.exists():
             config.vlm_model_name = str(vlm_local_dir.resolve())
         else:

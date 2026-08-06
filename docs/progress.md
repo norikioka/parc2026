@@ -170,12 +170,39 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
       滑らかさスコアの悪化を考慮しても総合的に10の方が優れていると判断。コード変更は不要、
       現状維持で確定（`policy_server_smolvla_full.py`に環境変数`PARC_N_ACTION_STEPS`での
       A/B切り替え機構を追加、既定値10は変更なし）
-- [ ] **← 次のアクション**: ステップ4（カメラ視点・姿勢augmentation、1個のみ）に着手
+- [x] ステップ4着手。planner設計（2026-08-06）を経て、Modal上で改善ループ基盤を構築
+      （`modal_deploy/train_app.py::train` → `app.py::run_evaluate_arm` → `docs/step4_experiments.csv`
+      に自動記録、という一連の流れ。`policy_server_smolvla_full.py`に`PARC_MODEL_DIR`環境変数で
+      モデル切り替え機構を追加、既定値は変更なし）
 
-### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
-- [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）
-- [ ] 次点: StableVLA型の軽量アダプタ（[arXiv:2605.18287](https://arxiv.org/abs/2605.18287)、追加10M未満パラメータ、データ拡張不要）
-- [ ] 見送り: 言語指示パラフレーズ対策（LIBERO-Plusで言語はほぼ無視されると判明、優先度低）
+### ステップ4: ロバスト性対策 — 実験結果（2026-08-06、Modal上で4アーム学習・評価完了）
+
+全アーム同一条件（3000ステップ、track1 example4タスク×n=10エピソード=40エピソード、Modal L4実機）:
+
+| アーム | 設定 | 成功率 |
+|---|---|---|
+| control | 現行と同一（episodes_per_task=5） | 82.5% |
+| **treatment_b** | **image_transforms有効化** | **87.5%（最良、+5.0pt）** |
+| treatment_c | episodes_per_task 5→20 | 85.0%（+2.5pt） |
+| treatment_d | image_transforms＋episodes_per_task=20（組み合わせ） | 75.0%（controlより悪化） |
+
+**考察**: image_transforms単体が最良。エピソード数増との組み合わせ(treatment_d)はむしろ悪化しており、
+3000ステップという短い学習では過剰なaugmentationが収束を妨げた可能性がある。事前登録した基準
+（+10pt以上でないと「明確に優位」と言えない、`docs/strategy.md`参照）には届いていないが、
+treatment_b・treatment_cの両方がcontrolを上回る方向で一致しており、弱いながらも一貫したシグナル。
+
+**【重要・2日間ユーザー不在に備えた運用】** 8/7・8/8はユーザーが指示を出せないため、
+判断せずに使える提出候補を複数用意しておく方針（8/6ユーザー指示）。
+
+- [x] **提出候補1（安全策）**: `submission_0.09397_KEEP.zip`（688MB）——現行の本番提出物そのもの。
+      本番実績あり、track1総合スコア0.09397確定済み
+- [x] **提出候補2（実験・本日分）**: `submission_treatment_b_0.875local.zip`（688MB）——
+      image_transforms版。ローカルn=10で87.5%、`validate_submission.py`でPASS済み
+      （errors=0, warnings=1[非決定的出力、想定内]、act latency mean=0.374s max=1.106s）。
+      **本番スコアは未検証**（ローカルと本番は単位が異なる、`docs/strategy.md`参照）
+- [ ] **← 次のアクション（8/7予定）**: 提出候補2をどこかのタイミングで提出し、本番スコアを確認する。
+      さらに2パターン（例: treatment_c版、または今日の結果を踏まえた新しい設定）を用意する。
+      「1つ出した後の点数を見てから、8/8以降の進め方を決めてよい」とユーザーから確認済み
 
 ### ステップ5: 提出前の最終チェック・提出
 - [ ] `evaluate.py`でzipをエンドツーエンドローカル検証

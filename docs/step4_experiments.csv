@@ -1,0 +1,6 @@
+timestamp,arm_name,n_episodes,overall_local_success_rate,elapsed_sec,returncode
+2026-08-06T04:57:50+00:00,smoke_test,1,0.75,297.0,0
+2026-08-06T05:44:14+00:00,treatment_b,10,0.875,1802.9,0
+2026-08-06T05:47:00+00:00,control,10,0.825,2110.1,0
+2026-08-06T05:50:00+00:00,treatment_c,10,0.85,2014.8,0
+2026-08-06T06:45:27+00:00,treatment_d,10,0.75,2085.6,0

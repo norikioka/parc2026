@@ -10,6 +10,8 @@ Dockerfile.gpuをベースイメージとして使う。
     modal run app.py::pipeline_smoke_test # LIBERO-Plus実環境での疎通確認(track1, 2episodes)
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import modal
@@ -31,7 +33,106 @@ image = (
     .add_local_dir(str(SRC / "vendor"), "/workspace/submission_template/vendor", copy=True)
     .add_local_dir(str(MODEL_DIR_LOCAL), "/workspace/submission_template/model_weights", copy=True)
     .add_local_dir(str(SRC / "vlm_assets"), "/workspace/submission_template/model_weights/vlm", copy=True)
+    # 【2026-08-06】build_and_validate_submission(arm_name=...)でmodel_weightsを丸ごと
+    # 差し替える際、vlmアセットも一緒に消えるため、差し替え不要な場所に複製しておく
+    .add_local_dir(str(SRC / "vlm_assets"), "/workspace/vlm_assets_backup", copy=True)
 )
+
+
+train_volume = modal.Volume.from_name("parc2026-train-outputs", create_if_missing=True)
+
+
+@app.function(image=image, gpu="L4", timeout=3600, volumes={"/train_vol": train_volume})
+def evaluate_arm(arm_name: str, n_episodes: int = 10, max_steps: int = 600):
+    """【2026-08-06 改善ループ用】train_app.py::trainで学習したarmを、既存の検証用
+    policy_server.pyに読み込ませてtrack1で評価する。結果を構造化して返す
+    (呼び出し側でdocs/step4_experiments.csvに追記し、arm間の比較を蓄積できるようにする)。"""
+    import json
+    import os
+    import re
+    import shutil
+    import subprocess
+    import time
+
+    train_volume.reload()
+
+    arm_model_src = Path(f"/train_vol/{arm_name}/merged")
+    assert arm_model_src.is_dir(), f"{arm_model_src} が見つかりません。train_app.py::trainを先に実行してください。"
+
+    model_dir_name = f"model_weights_{arm_name}"
+    model_dst = Path(f"/workspace/submission_template/{model_dir_name}")
+    shutil.rmtree(model_dst, ignore_errors=True)
+    shutil.copytree(arm_model_src, model_dst)
+    # VLMアセット(Hub参照回避用)は全arm共通なので、既にイメージに焼き込み済みのものを流用する
+    shutil.copytree(
+        "/workspace/submission_template/model_weights/vlm", model_dst / "vlm", dirs_exist_ok=True
+    )
+
+    log_path = f"/tmp/policy_server_eval_{arm_name}.log"
+    log_file = open(log_path, "w")
+    server_env = os.environ.copy()
+    server_env["PARC_MODEL_DIR"] = model_dir_name
+    proc = subprocess.Popen(
+        ["/workspace/venv/bin/python", "policy_server.py", "--port", "8000"],
+        cwd="/workspace/submission_template",
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        env=server_env,
+    )
+    time.sleep(5)
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "/workspace/LIBERO-plus:/workspace:/workspace/compe"
+    t0 = time.time()
+    result = subprocess.run(
+        ["/workspace/venv/bin/python", "-m", "pipeline",
+         "--server-url", "http://localhost:8000", "--track", "track1",
+         "--n-episodes", str(n_episodes), "--max-steps", str(max_steps)],
+        cwd="/workspace", env=env, capture_output=True, text=True, timeout=7200,
+    )
+    elapsed = time.time() - t0
+    proc.terminate()
+    log_file.close()
+
+    print(f"=== arm={arm_name} n_episodes={n_episodes} elapsed={elapsed:.1f}s ===")
+    print(result.stdout[-3000:])
+
+    overall_match = re.search(r"総合スコア\s+([0-9.]+)", result.stdout)
+    overall = float(overall_match.group(1)) if overall_match else None
+    task_scores = dict(re.findall(r"^\s{4}(\S+):\s+([0-9.]+)%", result.stdout, re.MULTILINE))
+
+    return {
+        "arm_name": arm_name,
+        "n_episodes": n_episodes,
+        "overall_local_success_rate": overall,
+        "per_task": task_scores,
+        "elapsed_sec": round(elapsed, 1),
+        "returncode": result.returncode,
+    }
+
+
+@app.local_entrypoint()
+def run_evaluate_arm(arm_name: str, n_episodes: int = 10):
+    """評価を実行し、結果をdocs/step4_experiments.csvに追記する(改善ループの記録)。"""
+    import csv
+    import datetime
+
+    result = evaluate_arm.remote(arm_name, n_episodes)
+    print(result)
+
+    csv_path = LOCAL_ROOT / "docs" / "step4_experiments.csv"
+    is_new = not csv_path.exists()
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if is_new:
+            writer.writerow(["timestamp", "arm_name", "n_episodes", "overall_local_success_rate",
+                              "elapsed_sec", "returncode"])
+        writer.writerow([
+            datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+            result["arm_name"], result["n_episodes"], result["overall_local_success_rate"],
+            result["elapsed_sec"], result["returncode"],
+        ])
+    print(f"記録: {csv_path}")
 
 
 @app.function(image=image, gpu="L4", timeout=600)
@@ -117,12 +218,26 @@ def offline_check():
         print("=== OFFLINE CHECK: FAIL ===")
 
 
-@app.function(image=image, gpu="L4", timeout=600)
-def build_and_validate_submission():
+@app.function(image=image, gpu="L4", timeout=600, volumes={"/train_vol": train_volume})
+def build_and_validate_submission(arm_name: str | None = None):
     """submission_template/一式をzip化し、公式validate_submission.pyで検証する。
-    PASSしたzipのバイト列を返す(呼び出し側でローカルに保存する)。"""
+    PASSしたzipのバイト列を返す(呼び出し側でローカルに保存する)。
+    【2026-08-06 改善ループ用】arm_nameを指定すると、Modal Volume上のtrain_app.py::train
+    出力に採用モデルを一時的に差し替えてからzip化する(未指定時は現行提出物のまま、挙動不変)。"""
     import shutil
     import subprocess
+
+    if arm_name is not None:
+        train_volume.reload()
+        arm_model_src = Path(f"/train_vol/{arm_name}/merged")
+        assert arm_model_src.is_dir(), f"{arm_model_src} が見つかりません。train_app.py::trainを先に実行してください。"
+        model_dst = Path("/workspace/submission_template/model_weights")
+        shutil.rmtree(model_dst)
+        shutil.copytree(arm_model_src, model_dst)
+        # VLMアセット(Hub参照回避用)は元のmodel_weights/vlmから退避しておいたものを戻す必要があるが、
+        # 上のrmtreeで消えるため、イメージビルド時にvlm_assets単体でも別途コピーしておく(下記image定義参照)
+        shutil.copytree("/workspace/vlm_assets_backup", model_dst / "vlm")
+        print(f"submission_template/model_weights を arm={arm_name} に差し替えました")
 
     zip_base = "/tmp/submission"
     shutil.make_archive(zip_base, "zip", root_dir="/workspace/submission_template")
@@ -149,9 +264,17 @@ def build_and_validate_submission():
 
 
 @app.local_entrypoint()
-def save_submission():
-    returncode, zip_bytes = build_and_validate_submission.remote()
-    out_path = LOCAL_ROOT / "submission.zip"
+def save_submission(out_name: str = "submission.zip", arm_name: str = ""):
+    """【2026-08-06 planner設計】出力ファイル名を固定していたため、実験のたびに
+    0.09397を出した実物を上書きしかねなかった。呼び出し時に名前を指定できるようにする。
+    arm_nameを指定すると、そのarmのモデルでzipを作る(未指定なら現行提出物のまま)。
+    例: modal run app.py::save_submission --out-name submission_treatment_b.zip --arm-name treatment_b"""
+    returncode, zip_bytes = build_and_validate_submission.remote(arm_name or None)
+    out_path = LOCAL_ROOT / out_name
+    if out_path.exists():
+        raise FileExistsError(
+            f"{out_path} は既に存在します。実物の上書きを防ぐため、別名を指定してください。"
+        )
     with open(out_path, "wb") as f:
         f.write(zip_bytes)
     print(f"保存先: {out_path} ({len(zip_bytes) / 1024 / 1024:.1f} MB)")
