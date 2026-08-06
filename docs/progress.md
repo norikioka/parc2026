@@ -150,9 +150,24 @@ git参照形式が、提出物バリデーションで「外部ソース（git+h
       Modal(GPU実機)で`submission_template/`一式(policy_server.py+requirements.txt+model_weights/+
       vendor/lerobot/)をzip化し、公式`validate_submission.py`でPASS確認
       (errors=0, warnings=1[非決定的出力の警告のみ、想定内]、act latency mean=0.383s max=1.134s)。
-      `submission.zip`(688MB)をOmnicampusにアップロード。**結果待ち**
-- [ ] **← 次のアクション**: Omnicampusの採点結果を確認 → public/private scoreを記録 →
-      次回提出の要否を判断（詳細は`docs/strategy.md`のロードマップ参照）
+      `submission.zip`(688MB)をOmnicampusにアップロード。
+- [x] **【本番採点結果】track1 総合スコア 0.09397** — 2026-08-06
+      参考ベースライン0.0633を同一単位で上回る(+48%)。Omnicampus側のログでクラッシュ・タイムアウトは
+      無く、正常に完走したことも確認済み。**ゲートA(`docs/strategy.md`)判定=GREEN確定**
+      （非ゼロかつ0.0633以上のため、ステップ4への着手条件を満たす）。
+      **【訂正】ローカルModal検証の62.5%(成功率のみ)と本番0.09397(成功率×衝突ペナルティ×滑らかさの
+      合成スコア)は単位が異なり、直接比較は無効だった**とcritic Opusレビューで判明(2026-08-06)。
+      「壊滅的な汎化失敗」という当初の懸念は誤りで、実際は地味だが確かな改善が出ている状態。
+      あわせて「LIBERO-Spatial限定学習が原因」という8/4来の仮説も、公式説明会資料3点を全文検索した
+      結果**出典が存在しないと判明**（Track1は公式には「同一タスク・同一ドメインへの摂動評価」と
+      説明されている）。詳細は`docs/strategy.md`のcriticレビュー記録参照
+- [ ] **← 次のアクション**（critic Opusレビュー反映、優先順）:
+      1. **【最優先・要確認】Omnicampusの提出採用方式（最新 or 最高点）を確認**——不明なまま実験的な
+         再提出をすると現在のスコアを上書きで失うリスクがある
+      2. `n_action_steps`50(変更前) vs 10(現状)のA/B検証をModalで実施（提出不要、GPU1〜2時間）。
+         50→10への変更が成功率を上げた一方、滑らかさスコア(jerk/SPARC)を悪化させている可能性が
+         未検証のまま残っている
+      3. 上記を踏まえてステップ4（カメラ視点・姿勢augmentation、1個のみ）に着手
 
 ### ステップ4: ロバスト性対策（2026-08-04調査で優先順位確定、余力があれば1〜2個）
 - [ ] **最優先**: カメラ視点・ロボット初期姿勢へのaugmentation（LIBERO-Plus論文が最弱点と明言している軸）
