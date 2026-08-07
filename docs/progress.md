@@ -234,9 +234,32 @@ treatment_b・treatment_cの両方がcontrolを上回る方向で一致してお
   | broad_ep20 | broad + episodes_per_task=20 | 77.5%（最低） |
 
   最良のbroad_unfrozenを`submission_broad_unfrozen_0.9local.zip`としてzip化・
-  validate_submission.py PASS・**Omnicampusへ提出済み、採点中**
+  validate_submission.py PASS・Omnicampusへ提出、**本番スコア0.03065（過去最低）**。
+  ローカル最高(90.0%)のモデルが本番最低という、過学習の典型パターン。ユーザー指摘により
+  「反射的に安全策へ戻す」判断を保留し、設計戦略自体の見直しに着手（2026-08-07）
 
-- [ ] **← 次のアクション**: broad_unfrozenの本番スコアを確認して判断
+- [x] **【方針転換】オフライン(held-out)評価を試すも判別力なしと判明** — 2026-08-07
+      本番スコアが既知の5アーム(control/treatment_b/treatment_c/broad/broad_unfrozen)について、
+      学習未使用のheld-outエピソード(全40タスク、約230本、lerobot本体の`make_train_eval_datasets`と
+      同一ロジック)でFlow Matching validation lossを計測(`modal_deploy/offline_eval.py`新設)。
+
+  | アーム | held-out loss | 本番スコア |
+  |---|---|---|
+  | control | 0.10144 | 〜0.083 |
+  | treatment_b | 0.13247(最悪) | 0.0836 |
+  | treatment_c | 0.10120 | 0.09175 |
+  | broad | 0.10152 | **0.12544（最良）** |
+  | broad_unfrozen | **0.10094（最良）** | **0.03065（最悪）** |
+
+  broad_unfrozenが本番最悪なのにheld-out lossは最良、という完全な逆転が発生し、この指標は
+  使えないと判断。researcherエージェントによる文献調査で、模倣学習分野では「held-out lossと
+  閉ループ成功率の乖離(covariate shift/compounding error)」が構造的に知られた現象であり、
+  offline指標の改良より**閉ループ評価のタスク数・摂動バリエーションを増やす方が有望**との
+  結論を得た。コードベース確認の結果、`lerobot/envs/libero.py`はLIBERO-Plusの摂動バリアント
+  (視点/照明/テクスチャ等)を任意に選択できる設計で、「4タスクのみ」という制約は配布物側の
+  `compe/t1/T1_TASKS.csv`によるものであり、コード自体に制約は無いと判明
+
+- [ ] **← 次のアクション**: LIBERO-Plusの摂動バリアントを使った閉ループ評価の拡張に着手
 
 ### ステップ5: 提出前の最終チェック・提出
 - [ ] `evaluate.py`でzipをエンドツーエンドローカル検証
